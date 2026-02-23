@@ -1,5 +1,5 @@
 package blockteil;
 
-public static class KMERFilterer {
+public class KMERFilterer {
     
 }
