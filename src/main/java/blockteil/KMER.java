@@ -5,7 +5,7 @@ public class KMER {
     private static final long mask;
 
     static {
-        mask = (1L << Main.KMER_LENGTH) - 1;
+        mask = (1L << (2 * Main.KMER_LENGTH)) - 1;
     }
 
     private static long getBitRepresentation(char c) {
