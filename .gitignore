@@ -3,3 +3,5 @@ data
 *.class
 *.jar
 .gitignore
+.idea/
+data/
