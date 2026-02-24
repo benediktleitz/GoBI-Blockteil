@@ -1,4 +1,4 @@
-package psi;
+package blockteil;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
