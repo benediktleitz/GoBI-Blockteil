@@ -1,4 +1,118 @@
 package blockteil;
+
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.zip.GZIPInputStream;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class ReadEinleseroutine {
-    
+
+    private static final int CHUNK_SIZE = 50000; // number of reads per chunk
+
+    // Class to hold one FASTQ record
+    static class FastqRecord {
+        String header, fw, rw, plus, fw_quality, rw_quality;
+
+        BitSet matchedGenes; // To store which genes this read matches
+
+        FastqRecord(String h, String fw, String rw, String fw_quality, String rw_quality) {
+            this.header = h; this.fw = fw; this.rw = rw; this.fw_quality = fw_quality; this.rw_quality = rw_quality;
+        }
+
+        public void setMatchedGenes(BitSet matchedGenes) {
+            this.matchedGenes = matchedGenes;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(header);
+            for (int i = 0; i < matchedGenes.length(); i++) {
+                sb.append("\t")
+                    .append(matchedGenes.get(i) ? "1" : "0"); // Mark matched genes as 1, others as 0
+            }
+            return sb.toString();
+        }
+    }
+
+    public static void filterReads(String fw_file, String rw_file, String outputFile) {
+        int numThreads = Runtime.getRuntime().availableProcessors();
+
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
+
+        try (BufferedReader br_fw = new BufferedReader(
+                 new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
+             BufferedReader br_rw = new BufferedReader(
+                 new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
+             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+
+            List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
+            String line_fw;
+            String line_rw;
+
+            while ((line_fw = br_fw.readLine()) != null && (line_rw = br_rw.readLine()) != null) { // Ensure both files have the same number of lines
+                String header = line_fw;
+                String fw = br_fw.readLine();
+                br_fw.readLine();
+                String fw_quality = br_fw.readLine();
+
+                String rw = br_rw.readLine();
+                br_rw.readLine();
+                String rw_quality = br_rw.readLine();
+
+                chunk.add(new FastqRecord(header, fw, rw, fw_quality, rw_quality));
+
+                if (chunk.size() >= CHUNK_SIZE) {
+                    // Submit chunk for parallel processing
+                    List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
+                    executor.submit(() -> {
+                        List<FastqRecord> processed = processChunk(chunkToProcess);
+                        writeChunk(processed, bw, writeLock);
+                    });
+                    chunk.clear();
+                }
+            }
+
+            // Submit remaining records
+            if (!chunk.isEmpty()) {
+                List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
+                executor.submit(() -> {
+                    List<FastqRecord> processed = processChunk(chunkToProcess);
+                    writeChunk(processed, bw, writeLock);
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            executor.shutdown();
+            try {
+                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }        
+    }
+
+    private static List<FastqRecord> processChunk(List<FastqRecord> chunk) {
+        for (FastqRecord r : chunk) {
+            r.setMatchedGenes(KMERFilterer.filterKMER(r.fw, r.rw));
+        }
+        return chunk;
+    }
+
+    // Thread-safe writing of processed chunk
+    private static void writeChunk(List<FastqRecord> chunk, BufferedWriter bw, ReentrantLock lock) {
+        lock.lock();
+        try {
+            for (FastqRecord r : chunk) {
+                bw.write(r.toString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
 }
