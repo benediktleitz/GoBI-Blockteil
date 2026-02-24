@@ -7,7 +7,7 @@ public class Main {
 
     public static final int OFFSET = 0;
     public static final HashMap<Long, HashSet<Integer>> KMER_MAP = new HashMap<>();
-    public static final String[] GENE_ARRAY = null;
+    public static String[] GENE_ARRAY = null;
     public static final int THRESHOLD = 0;
     public static int KMER_LENGTH;
 
@@ -24,6 +24,8 @@ public class Main {
             System.err.println("k-mer size must be between 1 and 31");
             System.exit(1);
         }
+
+
     }
 
     public int add(int a, int b) {
