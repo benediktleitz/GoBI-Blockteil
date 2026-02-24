@@ -26,6 +26,9 @@ public class ReadEinleseroutine {
 
         @Override
         public String toString() {
+            if (matchedGenes == null || matchedGenes.cardinality() == 0) {
+                return "";
+            }
             StringBuilder sb = new StringBuilder();
             sb.append(header);
             for (int i = 0; i < matchedGenes.length(); i++) {
