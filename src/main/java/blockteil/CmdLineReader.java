@@ -24,33 +24,33 @@ public class CmdLineReader {
 
     public Options get_parse_options() {
         Options options = new Options();
-        Option fastq = Option.builder("fastq")
+        Option fw = Option.builder("fw")
                 .hasArg()
-                .desc("path to fastq file")
+                .desc("path to fw fastq file")
                 .required()
                 .build();
 
-        Option frlength = Option.builder("frlength")
+        Option rw = Option.builder("rw")
                 .hasArg()
-                .desc("fragment length distribution: mean")
+                .desc("path to rw fastq file")
                 .required()
                 .build();
 
-        Option sd = Option.builder("SD")
+        Option k = Option.builder("k")
                 .hasArg()
-                .desc("Fragment length distribution: Standard Deviation")
+                .desc("k-mer size")
                 .required()
                 .build();
 
-        Option readcounts = Option.builder("readcounts")
+        Option offset = Option.builder("offset")
                 .hasArg()
-                .desc("table of gene_id, transcript_id, count tuples")
+                .desc("offset for read k-mer building")
                 .required()
                 .build();
 
-        Option mutationrate = Option.builder("mutationrate")
+        Option gtf = Option.builder("gtf")
                 .hasArg()
-                .desc("mutation rate in percent: proportion of simulated bases to be muatated")
+                .desc("path to the GTF file")
                 .required()
                 .build();
 
@@ -66,10 +66,9 @@ public class CmdLineReader {
                 .required()
                 .build();
 
-        Option gtf = Option.builder("gtf")
+        Option genes = Option.builder("genes") //maybe if genes nicht gesetzt -> alle Gene analysieren
                 .hasArg()
-                .desc("GTF File")
-                .required()
+                .desc("list of genes to analyze, newline-separated")
                 .build();
 
         Option output_dir = Option.builder("od")
@@ -77,16 +76,23 @@ public class CmdLineReader {
                 .desc("output directory")
                 .required()
                 .build();
+         
+        Option threshold = Option.builder("threshold")
+                .hasArg()
+                .desc("threshold value for filtering")
+                .required()
+                .build();
 
-        options.addOption(fastq);
-        options.addOption(frlength);
-        options.addOption(sd);
-        options.addOption(readcounts);
-        options.addOption(mutationrate);
+        options.addOption(fw);
+        options.addOption(rw);
+        options.addOption(k);
+        options.addOption(offset);
+        options.addOption(genes);
         options.addOption(fasta);
         options.addOption(fidx);
         options.addOption(gtf);
         options.addOption(output_dir);
+        options.addOption(threshold);
         return options;
     }
 
