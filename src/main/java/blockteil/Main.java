@@ -5,11 +5,11 @@ import java.util.HashSet;
 
 public class Main {
 
-    public static final int KMER_LENGTH;
-    public static final int OFFSET;
+    public static final int OFFSET = 0;
     public static final HashMap<Long, HashSet<Integer>> KMER_MAP = new HashMap<>();
-    public static final String[] GENE_ARRAY;
-    public static final int THRESHOLD;
+    public static final String[] GENE_ARRAY = null;
+    public static final int THRESHOLD = 0;
+    public static int KMER_LENGTH;
 
     public static void main(String[] args) {
         System.out.println("Hello, World!");

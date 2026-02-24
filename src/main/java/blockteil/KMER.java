@@ -58,4 +58,23 @@ public class KMER {
         }        
         return kmer;
     }
+
+    public static String decodeKmer(long encoded) {
+        char[] bases = new char[Main.KMER_LENGTH];
+
+        for (int i = 0; i < Main.KMER_LENGTH; i++) {
+            int shift = 2 * (Main.KMER_LENGTH - 1 - i);
+            int bits = (int) ((encoded >> shift) & 0b11);
+
+            bases[i] = switch (bits) {
+                case 0 -> 'A';
+                case 1 -> 'C';
+                case 2 -> 'G';
+                case 3 -> 'T';
+                default -> throw new IllegalStateException();
+            };
+        }
+
+        return new String(bases);
+    }
 }
