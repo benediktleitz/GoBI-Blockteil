@@ -3,31 +3,21 @@ package blockteil;
 public class KMER {
 
     private static final long mask;
+    private static final byte[] BASE_TO_BITS = new byte[128];
 
     static {
         mask = (1L << (2 * Main.KMER_LENGTH)) - 1;
-    }
-
-    private static long getBitRepresentation(char c) {
-        switch (c) {
-            case 'A':
-                return 0b00;
-            case 'C':
-                return 0b01;
-            case 'G':
-                return 0b10;
-            case 'T':
-                return 0b11;
-            default:
-                throw new IllegalArgumentException("Invalid character: " + c);
-        }
+        BASE_TO_BITS['A'] = 0b00;
+        BASE_TO_BITS['C'] = 0b01;
+        BASE_TO_BITS['G'] = 0b10;
+        BASE_TO_BITS['T'] = 0b11;
     }
 
     public static long makeKMER(byte[] sequence, int start) {
         long kmer = 0;
         for (int i = 0; i < Main.KMER_LENGTH; i++) {
             kmer <<= 2;
-            kmer |= getBitRepresentation((char) sequence[start + i]);
+            kmer |= BASE_TO_BITS[sequence[start + i]];
         }
         return kmer & mask;
     }
@@ -46,7 +36,7 @@ public class KMER {
 
     public static long shiftKMER(long kmer, char nextChar) {
         kmer <<= 2;
-        kmer |= getBitRepresentation(nextChar);
+        kmer |= BASE_TO_BITS[nextChar];
         return kmer & mask;
     }
 
