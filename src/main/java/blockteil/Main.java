@@ -1,8 +1,13 @@
 package blockteil;
 
+import java.util.HashMap;
+import java.util.HashSet;
+
 public class Main {
 
     public static final int KMER_LENGTH;
+    public static final int OFFSET;
+    public static final HashMap<Long, HashSet<Integer>> KMER_MAP = new HashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Hello, World!");
