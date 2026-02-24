@@ -29,4 +29,7 @@ public class Main {
     public int add(int a, int b) {
         return a + b;
     }
+    public void printHelp() {
+        System.out.println("HEEEEEEEEELP!");
+    }
 }
