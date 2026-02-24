@@ -1,22 +1,27 @@
 package blockteil;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.zip.GZIPInputStream;
 
 public class Einleseroutine {
     public String filePath;
-    public Map<String, Gene> genes;
+    public Map<String, Gene> id2gene;
     private final String[] searchStrings = {"gene_id", "gene_biotype"};
 
     public Einleseroutine(String filePath) {
         this.filePath = filePath;
-        this.genes = new HashMap<>(30000);
+        this.id2gene = new HashMap<>(30000);
     }
 
     public Map<String, Gene> read() {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(
+                        new GZIPInputStream(
+                                new FileInputStream(filePath))))) {
             String line;
             Map<String, String> attributes = new HashMap<>(5);
             String[] row = new String[9];
@@ -42,12 +47,12 @@ public class Einleseroutine {
                     start,
                     end
                 );
-                genes.put(gene_id, gene);
+                id2gene.put(gene_id, gene);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return genes;
+        return id2gene;
     }
     
     // Parses the attribute column of a GTF/GFF3 file line

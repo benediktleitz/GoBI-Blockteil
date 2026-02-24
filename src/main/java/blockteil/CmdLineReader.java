@@ -51,7 +51,6 @@ public class CmdLineReader {
         Option gtf = Option.builder("gtf")
                 .hasArg()
                 .desc("path to the GTF file")
-                .required()
                 .build();
 
         Option fasta = Option.builder("fasta")
