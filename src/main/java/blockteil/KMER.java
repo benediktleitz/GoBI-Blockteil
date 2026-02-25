@@ -2,7 +2,7 @@ package blockteil;
 
 public class KMER {
 
-    private static final long mask;
+    private static long mask;
     private static final byte[] BASE_TO_BITS = new byte[128];
 
     public static void init() {

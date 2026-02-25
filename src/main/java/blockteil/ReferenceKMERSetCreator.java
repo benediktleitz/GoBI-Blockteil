@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.HashSet;
 import java.util.stream.Stream;
 import java.nio.file.Paths;
+import java.util.Set;
 
 import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
@@ -37,7 +38,11 @@ public class ReferenceKMERSetCreator {
     }
 
     public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
-        Main.GENE_ARRAY = readGeneIds(geneFilePath);
+        if (geneFilePath == null) {
+            Main.GENE_ARRAY = readGeneIds(id2Gene.keySet()); // no genes list -> all genes in GTF file
+        } else {
+            Main.GENE_ARRAY = readGeneIds(geneFilePath);
+        }
         Gene g;
         for(int i = 0; i < Main.GENE_ARRAY.length; i++){
             g = id2Gene.get(Main.GENE_ARRAY[i]);
@@ -59,5 +64,10 @@ public class ReferenceKMERSetCreator {
             e.printStackTrace();
         }
         return null;
+    }
+    public String[] readGeneIds(Set<String> geneIds) {
+        return geneIds.stream()
+                .sorted()
+                .toArray(String[]::new);
     }
 }

@@ -81,6 +81,21 @@ public class CmdLineReader {
                 .desc("threshold value for filtering")
                 .required()
                 .build();
+        
+        Option chr = Option.builder("chr")
+                .hasArg()
+                .desc("chromosome name")
+                .build();
+
+        Option start = Option.builder("start")
+                .hasArg()
+                .desc("start position (1-based)")
+                .build();
+
+        Option end = Option.builder("end")
+                .hasArg()
+                .desc("end position (1-based)")
+                .build();
 
         options.addOption(fw);
         options.addOption(rw);
@@ -92,6 +107,9 @@ public class CmdLineReader {
         options.addOption(gtf);
         options.addOption(output_dir);
         options.addOption(threshold);
+        options.addOption(chr);
+        options.addOption(start);
+        options.addOption(end);
         return options;
     }
 

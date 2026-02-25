@@ -1,6 +1,7 @@
 package blockteil;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.zip.GZIPInputStream;
@@ -39,7 +40,7 @@ public class ReadEinleseroutine {
         }
     }
 
-    public static void filterReads(String fw_file, String rw_file, String outputFile) {
+    public static void filterReads(String fw_file, String rw_file, Path outputFile) {
         int numThreads = Runtime.getRuntime().availableProcessors();
 
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -49,7 +50,7 @@ public class ReadEinleseroutine {
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
              BufferedReader br_rw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
-             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
 
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;

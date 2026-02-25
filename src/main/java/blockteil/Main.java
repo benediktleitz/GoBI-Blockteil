@@ -1,5 +1,6 @@
 package blockteil;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -35,6 +36,49 @@ public class Main {
             System.exit(1);
         }
         KMER.init();
+        
+        ReferenceKMERSetCreator creator = new ReferenceKMERSetCreator(cmd.getOptionValue("fasta"));
+
+        String chr = cmd.getOptionValue("chr");
+        String startStr = cmd.getOptionValue("start");
+        String endStr = cmd.getOptionValue("end");
+        String genes = cmd.getOptionValue("genes");
+        String gtf = cmd.getOptionValue("gtf");
+
+        if (chr != null && startStr != null && endStr != null) {
+            int start = 0, end = 0;
+            try {
+                start = Integer.parseInt(startStr);
+                end = Integer.parseInt(endStr);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid start or end position: " + startStr + ", " + endStr);
+                System.exit(1);
+            }
+            Gene g = new Gene(null, chr, start, end);
+            creator.addKMERS(g);
+        } else if (genes != null && gtf != null) {
+            Einleseroutine reader = new Einleseroutine(gtf);
+            reader.read();
+            creator.addKMERS(genes, reader.id2gene);
+        } else if (gtf != null){
+            Einleseroutine reader = new Einleseroutine(gtf);
+            reader.read();
+            creator.addKMERS(null, reader.id2gene); // no genes list -> all genes in GTF file
+        } else {
+            System.err.println("Either chr, start and end, or genes and gtf, or only gtf (for all protein coding genes) options must be provided");
+            System.exit(1);
+        }
+
+        String fw = cmd.getOptionValue("fw");
+        String rw = cmd.getOptionValue("rw");
+        String od = cmd.getOptionValue("od");
+
+        Path outPath = Path.of(od, "filtered_genes.tsv");
+        if (fw == null || rw == null) {
+            System.err.println("Both fw and rw options must be provided");
+            System.exit(1);
+        }
+        ReadEinleseroutine.filterReads(fw, rw, outPath);
 
 
     }
