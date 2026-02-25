@@ -6,7 +6,7 @@ public class KMER {
     private static final byte[] BASE_TO_BITS = new byte[128];
 
     public static void init() {
-        mask = (1L << (2 * Main.KMER_LENGTH)) - 1;
+        mask = (1L << (2 * Config.KMER_LENGTH)) - 1;
         BASE_TO_BITS['A'] = 0b00;
         BASE_TO_BITS['C'] = 0b01;
         BASE_TO_BITS['G'] = 0b10;
@@ -15,7 +15,7 @@ public class KMER {
 
     public static long makeKMER(byte[] sequence, int start) {
         long kmer = 0;
-        for (int i = 0; i < Main.KMER_LENGTH; i++) {
+        for (int i = 0; i < Config.KMER_LENGTH; i++) {
             kmer <<= 2;
             kmer |= BASE_TO_BITS[sequence[start + i]];
         }
@@ -60,10 +60,10 @@ public class KMER {
     }
 
     public static String decodeKmer(long encoded) {
-        char[] bases = new char[Main.KMER_LENGTH];
+        char[] bases = new char[Config.KMER_LENGTH];
 
-        for (int i = 0; i < Main.KMER_LENGTH; i++) {
-            int shift = 2 * (Main.KMER_LENGTH - 1 - i);
+        for (int i = 0; i < Config.KMER_LENGTH; i++) {
+            int shift = 2 * (Config.KMER_LENGTH - 1 - i);
             int bits = (int) ((encoded >> shift) & 0b11);
 
             bases[i] = switch (bits) {

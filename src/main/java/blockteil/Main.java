@@ -3,6 +3,10 @@ package blockteil;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import blockteil.reference.*;
+import blockteil.readprocessing.ReadEinleseroutine;
+import blockteil.readprocessing.Writer;
+
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,39 +16,15 @@ import java.lang.Runtime;
 
 public class Main {
 
-    public static  int OFFSET;
-    //public static final HashMap<Long, HashSet<Integer>> KMER_MAP = new HashMap<>();
-    public static final Long2ObjectOpenHashMap<IntOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
-    public static String[] GENE_ARRAY = null;
-    public static int THRESHOLD = 0;
-    public static int KMER_LENGTH;
-
     public static void main(String[] args) {
         System.out.println("Hello, World!");
         Runtime run = Runtime.getRuntime();
         System.out.println(run.maxMemory());
         CmdLineReader cmd = new CmdLineReader(args);
-        try {
-            KMER_LENGTH = Integer.parseInt(cmd.getOptionValue("k"));
-            OFFSET = Integer.parseInt(cmd.getOptionValue("offset"));
-            THRESHOLD = Integer.parseInt(cmd.getOptionValue("threshold"));
-        } catch (NumberFormatException e) {
-            System.err.println("Invalid k-mer size, or offset, or threshold: " + cmd.getOptionValue("k") + ", " + cmd.getOptionValue("offset") + ", " + cmd.getOptionValue("threshold"));
-            System.exit(1);
-        }
-        if (KMER_LENGTH <= 0 || KMER_LENGTH > 31) {
-            System.err.println("k-mer size must be between 1 and 31");
-            System.exit(1);
-        }
-        if (OFFSET <= 0) {
-            System.err.println("Offset must be a positive integer");
-            System.exit(1);
-        }
-        if (THRESHOLD <= 0) {
-            System.err.println("Threshold must be a positive integer");
-            System.exit(1);
-        }
+
+        Config.init(cmd);
         KMER.init();
+
         
         ReferenceKMERSetCreator creator = new ReferenceKMERSetCreator(cmd.getOptionValue("fasta"));
 
@@ -76,7 +56,7 @@ public class Main {
                 creator.addKMERS(null, reader.id2gene); // no genes list -> all genes in GTF file
             } catch (OutOfMemoryError e) {
                 System.err.println("Error in adding k-mers: " + e.getMessage());
-                System.out.println(KMER_MAP.size() + " unique k-mers in map, " + GENE_ARRAY.length + " genes in array");
+                System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
                 System.exit(1);
             }
         } else {
@@ -84,7 +64,7 @@ public class Main {
             System.exit(1);
         }
         System.out.println("Finished creating k-mer map, starting to filter reads...");
-        System.out.println(KMER_MAP.size() + " unique k-mers in map, " + GENE_ARRAY.length + " genes in array");
+        System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
         
         String fw = cmd.getOptionValue("fw");
         String rw = cmd.getOptionValue("rw");
@@ -97,7 +77,7 @@ public class Main {
             System.exit(1);
         }
         ReadEinleseroutine.filterReads(fw, rw, outPath);
-        ReadEinleseroutine.writeGeneCounts(countPath);
+        Writer.writeGeneCounts(countPath);
         
     }
 

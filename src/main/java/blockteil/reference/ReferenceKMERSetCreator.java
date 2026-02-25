@@ -1,5 +1,8 @@
 package blockteil.reference;
 
+import blockteil.Config;
+import blockteil.KMER;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Map;
@@ -27,14 +30,14 @@ public class ReferenceKMERSetCreator {
         ReferenceSequence referenceSequence = this.fastaSequenceFile.getSubsequenceAt(chr, start, end); // end inclusive, 1 based
         byte[] referenceBases = referenceSequence.getBases();
         long kmer = KMER.makeKMER(referenceBases, 0);
-        Main.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
+        Config.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
                 .add(geneIdx);
-        for (int i = Main.KMER_LENGTH; i < referenceBases.length; i++) {
+        for (int i = Config.KMER_LENGTH; i < referenceBases.length; i++) {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
-            Main.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
+            Config.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
                     .add(geneIdx);
-            if (Main.KMER_MAP.size() % 10000000 == 0) {
-                System.out.println(Main.KMER_MAP.size() + " unique k-mers in map so far, at gene " + geneIdx + "/" + Main.GENE_ARRAY.length);
+            if (Config.KMER_MAP.size() % 10000000 == 0) {
+                System.out.println(Config.KMER_MAP.size() + " unique k-mers in map so far, at gene " + geneIdx + "/" + Config.GENE_ARRAY.length);
                 Runtime run = Runtime.getRuntime();
                 System.out.println("Memory usage: " + (run.totalMemory() - run.freeMemory()) / (1024 * 1024) + " MB");
             }
@@ -42,19 +45,19 @@ public class ReferenceKMERSetCreator {
     }
 
     public void addKMERS(Gene gene){
-        Main.GENE_ARRAY = new String[]{gene.name()}; // only one gene -> only one entry in gene array
+        Config.GENE_ARRAY = new String[]{gene.name()}; // only one gene -> only one entry in gene array
         addKMERS(gene.chromosome(), gene.start(), gene.end(), 0);
     }
 
     public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
         if (geneFilePath == null) {
-            Main.GENE_ARRAY = readGeneIds(id2Gene.keySet()); // no genes list -> all genes in GTF file
+            Config.GENE_ARRAY = readGeneIds(id2Gene.keySet()); // no genes list -> all genes in GTF file
         } else {
-            Main.GENE_ARRAY = readGeneIds(geneFilePath);
+            Config.GENE_ARRAY = readGeneIds(geneFilePath);
         }
         Gene g;
-        for(int i = 0; i < Main.GENE_ARRAY.length; i++){
-            g = id2Gene.get(Main.GENE_ARRAY[i]);
+        for(int i = 0; i < Config.GENE_ARRAY.length; i++){
+            g = id2Gene.get(Config.GENE_ARRAY[i]);
             if(g == null) continue;
             addKMERS(g.chromosome(), g.start(), g.end(), i);
         }

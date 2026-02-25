@@ -1,6 +1,6 @@
 package blockteil;
 
-import filters.KMERFilterer;
+import blockteil.filters.*;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -17,20 +17,33 @@ public class Config {
     public static boolean WRITE_TSV;
     public static KMERFilterer KMER_FILTERER;
 
-    public static void init(int kmerLength, int offset, int threshold) {
-        if (kmerLength <= 0 || kmerLength > 31) {
+    public static void init(CmdLineReader cmd) {
+        try {
+            KMER_LENGTH = Integer.parseInt(cmd.getOptionValue("k"));
+            OFFSET = Integer.parseInt(cmd.getOptionValue("offset"));
+            THRESHOLD = Integer.parseInt(cmd.getOptionValue("threshold"));
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid k-mer size, or offset, or threshold: " + cmd.getOptionValue("k") + ", " + cmd.getOptionValue("offset") + ", " + cmd.getOptionValue("threshold"));
+            System.exit(1);
+        }
+        if (KMER_LENGTH <= 0 || KMER_LENGTH > 31) {
             throw new IllegalArgumentException("k-mer size must be between 1 and 31");
         }
-        KMER_LENGTH = kmerLength;
-        if (offset <= 0) {
+        if (OFFSET <= 0) {
             throw new IllegalArgumentException("Offset must be a positive integer");
         }
-        OFFSET = offset;
-        if (threshold <= 0) {
+        if (THRESHOLD <= 0) {
             throw new IllegalArgumentException("Threshold must be a positive integer");
         }
-        THRESHOLD = threshold;
-        KMER.init();
+
+        WRITE_FASTQ = cmd.getOptionValue("fastq") != null;
+        WRITE_COUNT = cmd.getOptionValue("counts") != null;
+        WRITE_TSV = cmd.getOptionValue("tsv") != null;
+        EARLY_TERMINATION_ALLOWED = !WRITE_COUNT && !WRITE_TSV;
+
+        if(THRESHOLD <= KMER_LENGTH) KMER_FILTERER = new SmallThresholdFilterer();
+        else if(OFFSET >= KMER_LENGTH) KMER_FILTERER = new BigOffsetKMERFilterer();
+        else KMER_FILTERER = new GeneralKMERFilterer();
     }
 
     public static void setGeneArray(String[] geneArray) {

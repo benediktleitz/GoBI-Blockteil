@@ -91,6 +91,20 @@ public class CmdLineReader {
                 .desc("end position (1-based)")
                 .build();
 
+        Option fastq = Option.builder("fastq")
+                .desc("optional flag to write fastq files of filtered reads")
+                .build();
+
+        Option tsv = Option.builder("tsv")
+                .desc("optional flag to write tsv file (filtered reads to gene matrix)")
+                .build();
+
+        Option counts = Option.builder("counts")
+                .desc("optional flag to write gene counts file")
+                .build();
+
+
+
         options.addOption(fw);
         options.addOption(rw);
         options.addOption(k);
@@ -103,6 +117,9 @@ public class CmdLineReader {
         options.addOption(chr);
         options.addOption(start);
         options.addOption(end);
+        options.addOption(fastq);
+        options.addOption(tsv);
+        options.addOption(counts);
         return options;
     }
 
