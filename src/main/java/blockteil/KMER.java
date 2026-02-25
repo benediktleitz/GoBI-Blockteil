@@ -5,7 +5,7 @@ public class KMER {
     private static final long mask;
     private static final byte[] BASE_TO_BITS = new byte[128];
 
-    static {
+    public static void init() {
         mask = (1L << (2 * Main.KMER_LENGTH)) - 1;
         BASE_TO_BITS['A'] = 0b00;
         BASE_TO_BITS['C'] = 0b01;
