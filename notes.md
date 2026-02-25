@@ -118,8 +118,19 @@ initialise (reference kmer set creator (sequenz))
 kmer filtern (forward and reverse read -> yes or no)
 main
 
+## 25.02
 
 fastq output
 count output (maybe optional machen)
 only gene list
 million read/minute
+
+### plan from here
+
+parameter testen
+bash script for grid search (1 gen)
+for each k, offset, threshold output tsv 
+vergleiche mit mapping output (von sam) ipynb
+sam/bam file script reads mapped to that region
+merge files and compare
+
