@@ -1,5 +1,7 @@
 package blockteil;
 
+import filters.KMERFilterer;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
@@ -11,6 +13,10 @@ public class Config {
     public static int THRESHOLD;
     public static int KMER_LENGTH;
     public static boolean EARLY_TERMINATION_ALLOWED;
+    public static boolean WRITE_FASTQ;
+    public static boolean WRITE_COUNT;
+    public static boolean WRITE_TSV;
+    public static KMERFilterer KMER_FILTERER;
 
     public static void init(int kmerLength, int offset, int threshold) {
         if (kmerLength <= 0 || kmerLength > 31) {

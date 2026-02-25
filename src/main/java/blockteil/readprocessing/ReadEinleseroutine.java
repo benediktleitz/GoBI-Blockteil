@@ -1,5 +1,7 @@
 package blockteil.readprocessing;
 
+import blockteil.Config;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,36 +13,10 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ReadEinleseroutine {
 
     private static final int CHUNK_SIZE = 50000; // number of reads per chunk
-    private static List<BitSet> matchedGeneBitSets = new ArrayList<>(); // To store matched genes for all reads
+    public static List<BitSet> matchedGeneBitSets = new ArrayList<>(); // To store matched genes for all reads
 
     // Class to hold one FASTQ record
-    static class FastqRecord {
-        String header, fw, rw, plus, fw_quality, rw_quality;
 
-        BitSet matchedGenes; // To store which genes this read matches
-
-        FastqRecord(String h, String fw, String rw, String fw_quality, String rw_quality) {
-            this.header = h; this.fw = fw; this.rw = rw; this.fw_quality = fw_quality; this.rw_quality = rw_quality;
-        }
-
-        public void setMatchedGenes(BitSet matchedGenes) {
-            this.matchedGenes = matchedGenes;
-        }
-
-        @Override
-        public String toString() {
-            if (matchedGenes == null || matchedGenes.cardinality() == 0) {
-                return "";
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.append(header);
-            for (int i = 0; i < matchedGenes.length(); i++) {
-                sb.append("\t")
-                    .append(matchedGenes.get(i) ? "1" : "0"); // Mark matched genes as 1, others as 0
-            }
-            return sb.toString();
-        }
-    }
 
     public static void filterReads(String fw_file, String rw_file, Path outputFile) {
         int numThreads = Runtime.getRuntime().availableProcessors();
@@ -61,20 +37,17 @@ public class ReadEinleseroutine {
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
              BufferedReader br_rw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
-             BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
-
+            ) {
+            BufferedWriter[] writers = Writer.makeBufferedWriters("outputDir");
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;
             String line_rw;
 
-            writeLock.lock();
-            bw.write("read_id\t");
-            bw.write(String.join("\t", Main.GENE_ARRAY));
-            bw.newLine();
-            writeLock.unlock();
+            if (Config.WRITE_TSV) {
+                Writer.writeTSVHeader(writers[0], writeLock);
+            }
 
             while ((line_fw = br_fw.readLine()) != null && (line_rw = br_rw.readLine()) != null) { // Ensure both files have the same number of lines
-                String header = line_fw;
                 String fw = br_fw.readLine();
                 br_fw.readLine();
                 String fw_quality = br_fw.readLine();
@@ -83,14 +56,14 @@ public class ReadEinleseroutine {
                 br_rw.readLine();
                 String rw_quality = br_rw.readLine();
 
-                chunk.add(new FastqRecord(header, fw, rw, fw_quality, rw_quality));
+                chunk.add(new FastqRecord(line_fw, line_rw, fw, rw, fw_quality, rw_quality));
 
                 if (chunk.size() >= CHUNK_SIZE) {
                     // Submit chunk for parallel processing
                     List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
                     futures.add(executor.submit(() -> {
                         List<FastqRecord> processed = processChunk(chunkToProcess);
-                        writeChunk(processed, bw, writeLock);
+                        Writer.writeChunk(processed, writers, writeLock);
                     }));
                     chunk.clear();
                 }
@@ -101,7 +74,7 @@ public class ReadEinleseroutine {
                 List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
                 futures.add(executor.submit(() -> {
                     List<FastqRecord> processed = processChunk(chunkToProcess);
-                    writeChunk(processed, bw, writeLock);
+                    Writer.writeChunk(processed, writers, writeLock);
                 }));
             }
 
@@ -129,53 +102,10 @@ public class ReadEinleseroutine {
 
     private static List<FastqRecord> processChunk(List<FastqRecord> chunk) {
         for (FastqRecord r : chunk) {
-            BitSet matchedGenes = KMERFilterer.filterKMER(r.fw, r.rw);
+            BitSet matchedGenes = Config.KMER_FILTERER.filterKMER(r.fw, r.rw);
             r.setMatchedGenes(matchedGenes);
             matchedGeneBitSets.add(matchedGenes);
         }
         return chunk;
-    }
-
-    // Thread-safe writing of processed chunk
-    private static void writeChunk(List<FastqRecord> chunk, BufferedWriter bw, ReentrantLock lock) {
-        lock.lock();
-        try {
-            for (FastqRecord r : chunk) {
-                String line = r.toString();
-                if (line.isEmpty()) {
-                    continue;
-                }
-                bw.write(line);
-                bw.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public static int[] countBits(int length) {
-        int[] counts = new int[length];
-
-        for (BitSet bs : matchedGeneBitSets) {
-            for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i + 1)) {
-                counts[i]++;
-            }
-        }
-
-        return counts;
-    }
-
-    public static void writeGeneCounts(Path outputFile) {
-        int[] counts = countBits(Main.GENE_ARRAY.length);
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
-            bw.write("gene\tcount\n");
-            for (int i = 0; i < Main.GENE_ARRAY.length; i++) {
-                bw.write(Main.GENE_ARRAY[i] + "\t" + counts[i] + "\n");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }
