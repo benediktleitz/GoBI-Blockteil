@@ -1,4 +1,4 @@
-package blockteil;
+package blockteil.reference;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
