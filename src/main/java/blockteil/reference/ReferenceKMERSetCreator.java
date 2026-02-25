@@ -51,15 +51,15 @@ public class ReferenceKMERSetCreator {
     }
 
     public void addKMERS(Gene gene){
-        Config.GENE_ARRAY = new String[]{gene.name()}; // only one gene -> only one entry in gene array
+        Config.setGeneArray(new String[]{gene.name()}); // only one gene -> only one entry in gene array
         addKMERS(gene.chromosome(), gene.start(), gene.end(), 0);
     }
 
     public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
         if (geneFilePath == null) {
-            Config.GENE_ARRAY = readGeneIds(id2Gene.keySet()); // no genes list -> all genes in GTF file
+            Config.setGeneArray(readGeneIds(id2Gene.keySet())); // no genes list -> all genes in GTF file
         } else {
-            Config.GENE_ARRAY = readGeneIds(geneFilePath);
+            Config.setGeneArray(readGeneIds(geneFilePath));
         }
         Gene g;
         for(int i = 0; i < Config.GENE_ARRAY.length; i++){

@@ -50,5 +50,8 @@ public class Config {
     public static void setGeneArray(String[] geneArray) {
         GENE_ARRAY = geneArray;
         COUNT_ARRAY = new int[geneArray.length];
+        if (geneArray.length == 1) {
+            EARLY_TERMINATION_ALLOWED = true; // if only one gene, we can terminate early as soon as we find a match
+        }
     }
 }

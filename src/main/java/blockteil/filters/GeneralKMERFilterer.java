@@ -25,6 +25,7 @@ public class GeneralKMERFilterer extends KMERFilterer {
                     geneToMatchedPositions[gene] = matched;
                 }
                 matched.set(i, i + Config.KMER_LENGTH);
+                Config.COUNT_ARRAY[gene] += 1;
                 if (Config.EARLY_TERMINATION_ALLOWED && matched.cardinality() >= Config.THRESHOLD) break A;
             }
         }

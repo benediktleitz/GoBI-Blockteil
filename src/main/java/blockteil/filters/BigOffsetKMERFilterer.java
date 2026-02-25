@@ -20,6 +20,7 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
 
             for (Integer gene : matchingGenes) {
                 geneToMatchedPositions[gene] += Config.KMER_LENGTH;
+                Config.COUNT_ARRAY[gene] += 1;
                 if (Config.EARLY_TERMINATION_ALLOWED && geneToMatchedPositions[gene] >= Config.THRESHOLD) break A;
             }
         }

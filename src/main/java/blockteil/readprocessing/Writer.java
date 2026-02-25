@@ -69,24 +69,11 @@ public class Writer {
         }
     }
 
-    public static int[] countBits(int length) {
-        int[] counts = new int[length];
-
-        for (BitSet bs : ReadEinleseroutine.matchedGeneBitSets) {
-            for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i + 1)) {
-                counts[i]++;
-            }
-        }
-
-        return counts;
-    }
-
     public static void writeGeneCounts(Path outputFile) {
-        int[] counts = countBits(Config.GENE_ARRAY.length);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
             bw.write("gene\tcount\n");
             for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
-                bw.write(Config.GENE_ARRAY[i] + "\t" + counts[i] + "\n");
+                bw.write(Config.GENE_ARRAY[i] + "\t" + Config.COUNT_ARRAY[i] + "\n");
             }
         } catch (IOException e) {
             e.printStackTrace();

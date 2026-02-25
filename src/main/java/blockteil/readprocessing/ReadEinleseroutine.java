@@ -13,7 +13,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ReadEinleseroutine {
 
     private static final int CHUNK_SIZE = 50000; // number of reads per chunk
-    public static List<BitSet> matchedGeneBitSets = new ArrayList<>(); // To store matched genes for all reads
 
     // Class to hold one FASTQ record
 
@@ -104,7 +103,6 @@ public class ReadEinleseroutine {
         for (FastqRecord r : chunk) {
             BitSet matchedGenes = Config.KMER_FILTERER.filterKMER(r.fw, r.rw);
             r.setMatchedGenes(matchedGenes);
-            matchedGeneBitSets.add(matchedGenes);
         }
         return chunk;
     }
