@@ -7,7 +7,6 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class Config {
     public static int OFFSET;
-    //public static final HashMap<Long, HashSet<Integer>> KMER_MAP = new HashMap<>();
     public static final Long2ObjectOpenHashMap<IntOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
     public static String[] GENE_ARRAY;
     public static int THRESHOLD;
