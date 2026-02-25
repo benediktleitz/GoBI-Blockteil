@@ -68,7 +68,9 @@ public class Main {
             System.err.println("Either chr, start and end, or genes and gtf, or only gtf (for all protein coding genes) options must be provided");
             System.exit(1);
         }
-
+        System.out.println("Finished creating k-mer map, starting to filter reads...");
+        System.out.println(KMER_MAP.size() + " unique k-mers in map, " + GENE_ARRAY.length + " genes in array");
+        
         String fw = cmd.getOptionValue("fw");
         String rw = cmd.getOptionValue("rw");
         String od = cmd.getOptionValue("od");

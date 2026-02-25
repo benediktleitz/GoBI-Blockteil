@@ -1,6 +1,7 @@
 package blockteil;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
@@ -45,6 +46,15 @@ public class ReadEinleseroutine {
 
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
+        List<Future<?>> futures = new ArrayList<>();
+
+        try {
+            if (outputFile.getParent() != null) {
+                Files.createDirectories(outputFile.getParent());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not create output directory for " + outputFile, e);
+        }
 
         try (BufferedReader br_fw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
@@ -55,6 +65,12 @@ public class ReadEinleseroutine {
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;
             String line_rw;
+
+            writeLock.lock();
+            bw.write("read_id\t");
+            bw.write(String.join("\t", Main.GENE_ARRAY));
+            bw.newLine();
+            writeLock.unlock();
 
             while ((line_fw = br_fw.readLine()) != null && (line_rw = br_rw.readLine()) != null) { // Ensure both files have the same number of lines
                 String header = line_fw;
@@ -71,10 +87,10 @@ public class ReadEinleseroutine {
                 if (chunk.size() >= CHUNK_SIZE) {
                     // Submit chunk for parallel processing
                     List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
-                    executor.submit(() -> {
+                    futures.add(executor.submit(() -> {
                         List<FastqRecord> processed = processChunk(chunkToProcess);
                         writeChunk(processed, bw, writeLock);
-                    });
+                    }));
                     chunk.clear();
                 }
             }
@@ -82,10 +98,21 @@ public class ReadEinleseroutine {
             // Submit remaining records
             if (!chunk.isEmpty()) {
                 List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
-                executor.submit(() -> {
+                futures.add(executor.submit(() -> {
                     List<FastqRecord> processed = processChunk(chunkToProcess);
                     writeChunk(processed, bw, writeLock);
-                });
+                }));
+            }
+
+            for (Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Filtering was interrupted", e);
+                } catch (ExecutionException e) {
+                    throw new RuntimeException("Worker failed during chunk processing", e.getCause());
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -111,7 +138,12 @@ public class ReadEinleseroutine {
         lock.lock();
         try {
             for (FastqRecord r : chunk) {
-                bw.write(r.toString());
+                String line = r.toString();
+                if (line.isEmpty()) {
+                    continue;
+                }
+                bw.write(line);
+                bw.newLine();
             }
         } catch (IOException e) {
             e.printStackTrace();

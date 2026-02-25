@@ -34,6 +34,7 @@ public class ReferenceKMERSetCreator {
     }
 
     public void addKMERS(Gene gene){
+        Main.GENE_ARRAY = new String[]{gene.name()}; // only one gene -> only one entry in gene array
         addKMERS(gene.chromosome(), gene.start(), gene.end(), 0);
     }
 

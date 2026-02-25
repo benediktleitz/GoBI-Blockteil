@@ -59,12 +59,6 @@ public class CmdLineReader {
                 .required()
                 .build();
 
-        Option fidx = Option.builder("fidx")
-                .hasArg()
-                .desc("genome FASTA file index")
-                .required()
-                .build();
-
         Option genes = Option.builder("genes") //maybe if genes nicht gesetzt -> alle Gene analysieren
                 .hasArg()
                 .desc("list of genes to analyze, newline-separated")
@@ -103,7 +97,6 @@ public class CmdLineReader {
         options.addOption(offset);
         options.addOption(genes);
         options.addOption(fasta);
-        options.addOption(fidx);
         options.addOption(gtf);
         options.addOption(output_dir);
         options.addOption(threshold);
