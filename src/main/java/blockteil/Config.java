@@ -9,6 +9,7 @@ public class Config {
     public static int OFFSET;
     public static final Long2ObjectOpenHashMap<IntOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
     public static String[] GENE_ARRAY;
+    public static int[] COUNT_ARRAY;
     public static int THRESHOLD;
     public static int KMER_LENGTH;
     public static boolean EARLY_TERMINATION_ALLOWED;
@@ -44,5 +45,10 @@ public class Config {
         if(THRESHOLD <= KMER_LENGTH) KMER_FILTERER = new SmallThresholdFilterer();
         else if(OFFSET >= KMER_LENGTH) KMER_FILTERER = new BigOffsetKMERFilterer();
         else KMER_FILTERER = new GeneralKMERFilterer();
+    }
+
+    public static void setGeneArray(String[] geneArray) {
+        GENE_ARRAY = geneArray;
+        COUNT_ARRAY = new int[geneArray.length];
     }
 }

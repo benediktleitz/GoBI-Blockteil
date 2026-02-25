@@ -18,8 +18,6 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("Hello, World!");
-        Runtime run = Runtime.getRuntime();
-        System.out.println(run.maxMemory());
         CmdLineReader cmd = new CmdLineReader(args);
 
         Config.init(cmd);
