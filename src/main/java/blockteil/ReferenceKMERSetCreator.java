@@ -13,6 +13,7 @@ import java.lang.Runtime;
 import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 public class ReferenceKMERSetCreator {
 
@@ -26,11 +27,11 @@ public class ReferenceKMERSetCreator {
         ReferenceSequence referenceSequence = this.fastaSequenceFile.getSubsequenceAt(chr, start, end); // end inclusive, 1 based
         byte[] referenceBases = referenceSequence.getBases();
         long kmer = KMER.makeKMER(referenceBases, 0);
-        Main.KMER_MAP.computeIfAbsent(kmer, k -> new HashSet<>())
+        Main.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
                 .add(geneIdx);
         for (int i = Main.KMER_LENGTH; i < referenceBases.length; i++) {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
-            Main.KMER_MAP.computeIfAbsent(kmer, k -> new HashSet<>())
+            Main.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
                     .add(geneIdx);
             if (Main.KMER_MAP.size() % 10000000 == 0) {
                 System.out.println(Main.KMER_MAP.size() + " unique k-mers in map so far, at gene " + geneIdx + "/" + Main.GENE_ARRAY.length);
