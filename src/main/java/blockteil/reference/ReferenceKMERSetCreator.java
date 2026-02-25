@@ -26,9 +26,15 @@ public class ReferenceKMERSetCreator {
         this.fastaSequenceFile = ReferenceSequenceFileFactory.getReferenceSequenceFile(new File(fastaPath));
     }
 
-    public void addKMERS(String chr, int start, int end, Integer geneIdx){
+    public byte[] getReferenceBases(String chr, int start, int end){
         ReferenceSequence referenceSequence = this.fastaSequenceFile.getSubsequenceAt(chr, start, end); // end inclusive, 1 based
-        byte[] referenceBases = referenceSequence.getBases();
+        return referenceSequence.getBases();
+        // TODO gettranscriptsequence
+        // like in readsimultaro
+    }
+
+    public void addKMERS(String chr, int start, int end, Integer geneIdx){
+        byte[] referenceBases = getReferenceBases(chr, start, end);
         long kmer = KMER.makeKMER(referenceBases, 0);
         Config.KMER_MAP.computeIfAbsent(kmer, k -> new IntOpenHashSet())
                 .add(geneIdx);
