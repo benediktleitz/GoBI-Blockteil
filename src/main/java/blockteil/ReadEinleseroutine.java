@@ -11,6 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ReadEinleseroutine {
 
     private static final int CHUNK_SIZE = 50000; // number of reads per chunk
+    private static List<BitSet> matchedGeneBitSets = new ArrayList<>(); // To store matched genes for all reads
 
     // Class to hold one FASTQ record
     static class FastqRecord {
@@ -128,7 +129,9 @@ public class ReadEinleseroutine {
 
     private static List<FastqRecord> processChunk(List<FastqRecord> chunk) {
         for (FastqRecord r : chunk) {
-            r.setMatchedGenes(KMERFilterer.filterKMER(r.fw, r.rw));
+            BitSet matchedGenes = KMERFilterer.filterKMER(r.fw, r.rw);
+            r.setMatchedGenes(matchedGenes);
+            matchedGeneBitSets.add(matchedGenes);
         }
         return chunk;
     }
@@ -149,6 +152,30 @@ public class ReadEinleseroutine {
             e.printStackTrace();
         } finally {
             lock.unlock();
+        }
+    }
+
+    public static int[] countBits(int length) {
+        int[] counts = new int[length];
+
+        for (BitSet bs : matchedGeneBitSets) {
+            for (int i = bs.nextSetBit(0); i >= 0; i = bs.nextSetBit(i + 1)) {
+                counts[i]++;
+            }
+        }
+
+        return counts;
+    }
+
+    public static void writeGeneCounts(Path outputFile) {
+        int[] counts = countBits(Main.GENE_ARRAY.length);
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
+            bw.write("gene\tcount\n");
+            for (int i = 0; i < Main.GENE_ARRAY.length; i++) {
+                bw.write(Main.GENE_ARRAY[i] + "\t" + counts[i] + "\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }

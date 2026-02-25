@@ -117,3 +117,9 @@ reader schreiben (fastq = reads, reference for one gene = fasta + fai, cmdlinere
 initialise (reference kmer set creator (sequenz))
 kmer filtern (forward and reverse read -> yes or no)
 main
+
+
+fastq output
+count output (maybe optional machen)
+only gene list
+million read/minute

@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.stream.Stream;
 import java.nio.file.Paths;
 import java.util.Set;
+import java.lang.Runtime;
+
 
 import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
@@ -30,6 +32,11 @@ public class ReferenceKMERSetCreator {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
             Main.KMER_MAP.computeIfAbsent(kmer, k -> new HashSet<>())
                     .add(geneIdx);
+            if (Main.KMER_MAP.size() % 10000000 == 0) {
+                System.out.println(Main.KMER_MAP.size() + " unique k-mers in map so far, at gene " + geneIdx + "/" + Main.GENE_ARRAY.length);
+                Runtime run = Runtime.getRuntime();
+                System.out.println("Memory usage: " + (run.totalMemory() - run.freeMemory()) / (1024 * 1024) + " MB");
+            }
         }
     }
 
