@@ -123,4 +123,3 @@ fastq output
 count output (maybe optional machen)
 only gene list
 million read/minute
-
