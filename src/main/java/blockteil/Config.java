@@ -45,12 +45,4 @@ public class Config {
         else if(OFFSET >= KMER_LENGTH) KMER_FILTERER = new BigOffsetKMERFilterer();
         else KMER_FILTERER = new GeneralKMERFilterer();
     }
-
-    public static void setGeneArray(String[] geneArray) {
-        GENE_ARRAY = geneArray;
-    }
-
-    public static void setEarlyTerminationAllowed(boolean allowed) {
-        EARLY_TERMINATION_ALLOWED = allowed;
-    }
 }
