@@ -37,9 +37,9 @@ public class Config {
             throw new IllegalArgumentException("Threshold must be a positive integer");
         }
 
-        WRITE_FASTQ = cmd.getOptionValue("fastq") != null;
-        WRITE_COUNT = cmd.getOptionValue("counts") != null;
-        WRITE_TSV = cmd.getOptionValue("tsv") != null;
+        WRITE_FASTQ = cmd.hasOption("fastq");
+        WRITE_COUNT = cmd.hasOption("counts");
+        WRITE_TSV = cmd.hasOption("tsv");
         EARLY_TERMINATION_ALLOWED = !WRITE_COUNT && !WRITE_TSV;
 
         if(THRESHOLD <= KMER_LENGTH) KMER_FILTERER = new SmallThresholdFilterer();

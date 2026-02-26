@@ -127,4 +127,8 @@ public class CmdLineReader {
         return cmd.getOptionValue(option);
     }
 
+    public boolean hasOption(String option) {
+        return cmd.hasOption(option);
+    }
+
 }

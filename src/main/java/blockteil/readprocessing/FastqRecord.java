@@ -1,5 +1,7 @@
 package blockteil.readprocessing;
 
+import blockteil.Config;
+
 import java.util.BitSet;
 
 public class FastqRecord {
@@ -21,7 +23,7 @@ public class FastqRecord {
         }
         StringBuilder sb = new StringBuilder();
         sb.append(fw_header);
-        for (int i = 0; i < matchedGenes.length(); i++) {
+        for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
             sb.append("\t")
                 .append(matchedGenes.get(i) ? "1" : "0"); // Mark matched genes as 1, others as 0
         }

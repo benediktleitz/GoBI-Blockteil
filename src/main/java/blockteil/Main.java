@@ -69,8 +69,10 @@ public class Main {
             System.err.println("Both fw and rw options must be provided");
             System.exit(1);
         }
-        ReadEinleseroutine.filterReads(fw, rw, outPath);
-        Writer.writeGeneCounts(countPath);
+        ReadEinleseroutine.filterReads(fw, rw, od);
+        if (Config.WRITE_COUNT) {
+            Writer.writeGeneCounts(countPath);
+        }
         
     }
 
