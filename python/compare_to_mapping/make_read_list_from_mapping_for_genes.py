@@ -38,19 +38,15 @@ def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir
 
 def main(args):
     genes2positions = make_gene_to_position_dict(args.gtf, args.gene_list)
-    if args.bam:
-        bamfile = pysam.AlignmentFile(args.mapping, "rb")
-    else:
-        bamfile = pysam.AlignmentFile(args.mapping, "r")
+    bamfile = pysam.AlignmentFile(args.mapping, "rb")
     
     for gene, (chrom, start, end) in genes2positions.items():
-        write_gene_read_list_fetch(bamfile, chrom, start, end, gene, args.od)
+        write_gene_read_list(bamfile, chrom, start, end, gene, args.od)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a read list from a mapping file for specific genes.")
-    parser.add_argument("--mapping", required=True, help="Path to the mapping file (e.g., BAM or SAM).")
-    parser.add_argument("--bam", required=False, action="store_true", help="Path to the BAM file containing the read alignments.")
+    parser.add_argument("--mapping", required=True, help="Path to the mapping file (BAM).")
     parser.add_argument("--gene_list", required=True, help="Path to the file containing the list of genes.")
     parser.add_argument("--gtf", required=True, help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
