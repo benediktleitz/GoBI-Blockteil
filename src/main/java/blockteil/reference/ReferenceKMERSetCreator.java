@@ -31,7 +31,7 @@ public abstract class ReferenceKMERSetCreator {
         Config.KMER_MAP
                 .computeIfAbsent(kmer, k -> new IntOpenHashSet())
                 .add(idx);
-        for (int i = Config.KMER_LENGTH; i < regionEnd; i++) {
+        for (int i = Config.KMER_LENGTH + regionStart; i < regionEnd; i++) {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
             Config.KMER_MAP
                     .computeIfAbsent(kmer, k -> new IntOpenHashSet())
