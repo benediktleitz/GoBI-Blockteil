@@ -21,8 +21,8 @@ public class SmallThresholdFilterer extends KMERFilterer {
             if (matchingGenes == null) continue;
 
             for (Integer gene : matchingGenes) {
+                if (!out.get(gene)) Config.COUNT_ARRAY[gene] += 1;
                 out.set(gene);
-                Config.COUNT_ARRAY[gene] += 1;
                 if (Config.EARLY_TERMINATION_ALLOWED) break A;
             }
         }

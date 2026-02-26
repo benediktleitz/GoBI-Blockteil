@@ -3,8 +3,8 @@ import argparse
 import os
 
 def compare_filter_to_mapping(gene, filter_df, read_lists_dir):
-    gene_rows = filter_df[gene == 1]
-    filter_reads = set(gene_rows['read_id'])
+    gene_rows = filter_df[filter_df[gene] == 1]
+    filter_reads = set(gene_rows['read_id'].str.strip())
     read_list_file = os.path.join(read_lists_dir, f"{gene}_reads.txt")
     if not os.path.exists(read_list_file):
         print(f"Warning: Read list file for gene {gene} not found at {read_list_file}. Skipping.")
@@ -21,11 +21,18 @@ def compare_filter_to_mapping(gene, filter_df, read_lists_dir):
 
 def main(args):
     filter_df = pd.read_csv(args.filter_result, sep='\t')
+    filter_df["read_id"] = filter_df["read_id"].str.split(" ").str[0].str[1:]
+
+    filter_samples = filter_df["read_id"].dropna().astype(str).str.strip()
+    filter_samples = [rid for rid in filter_samples if rid][:3]
+
     genes = filter_df.columns[1:]
     summary_data = []
     for gene in genes:
         summary_data.append(compare_filter_to_mapping(gene, filter_df, args.read_lists))
-    with open(os.path.join(args.od, "comparison_summary.tsv"), 'w') as f:
+
+    output_path = os.path.abspath(os.path.join(args.od, "comparison_summary.tsv"))
+    with open(output_path, 'w') as f:
         f.write("gene\tfiltered_reads\tmapping_reads\tmatched\tnot_mapped\tnot_filtered\n")
         for row in summary_data:
             f.write("\t".join(map(str, row)) + "\n")

@@ -23,9 +23,9 @@ public class GeneralKMERFilterer extends KMERFilterer {
                 if (matched == null) {
                     matched = new BitSet();
                     geneToMatchedPositions[gene] = matched;
+                    Config.COUNT_ARRAY[gene] += 1;
                 }
                 matched.set(i, i + Config.KMER_LENGTH);
-                Config.COUNT_ARRAY[gene] += 1;
                 if (Config.EARLY_TERMINATION_ALLOWED && matched.cardinality() >= Config.THRESHOLD) break A;
             }
         }
