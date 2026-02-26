@@ -17,27 +17,19 @@ public class ReadEinleseroutine {
     // Class to hold one FASTQ record
 
 
-    public static void filterReads(String fw_file, String rw_file, Path outputFile) {
+    public static void filterReads(String fw_file, String rw_file, String outputDir) {
         int numThreads = Runtime.getRuntime().availableProcessors();
 
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
         List<Future<?>> futures = new ArrayList<>();
 
-        try {
-            if (outputFile.getParent() != null) {
-                Files.createDirectories(outputFile.getParent());
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not create output directory for " + outputFile, e);
-        }
-
         try (BufferedReader br_fw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
              BufferedReader br_rw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
             ) {
-            BufferedWriter[] writers = Writer.makeBufferedWriters("outputDir");
+            BufferedWriter[] writers = Writer.makeBufferedWriters(outputDir);
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;
             String line_rw;
