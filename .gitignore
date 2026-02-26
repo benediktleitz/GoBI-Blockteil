@@ -6,6 +6,8 @@ data
 .idea/
 data/
 output/
+output
 src/main/java/blockteil/Test.java
 testFiles/
 python/venv/
+gene_list.txt
