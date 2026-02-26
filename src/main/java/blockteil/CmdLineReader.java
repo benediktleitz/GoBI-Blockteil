@@ -103,6 +103,10 @@ public class CmdLineReader {
                 .desc("optional flag to write gene counts file")
                 .build();
 
+        Option rna = Option.builder("rna")
+                .desc("optional flag to test RNA-Seq data")
+                .build();
+
 
 
         options.addOption(fw);
@@ -120,6 +124,7 @@ public class CmdLineReader {
         options.addOption(fastq);
         options.addOption(tsv);
         options.addOption(counts);
+        options.addOption(rna);
         return options;
     }
 

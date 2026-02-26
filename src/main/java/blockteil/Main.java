@@ -19,7 +19,7 @@ public class Main {
         KMER.init();
 
         
-        ReferenceKMERSetCreator creator = new ReferenceKMERSetCreator(cmd.getOptionValue("fasta"));
+        ReferenceKMERSetCreator creator = Config.REFERENCE_KMER_SET_CREATOR;
 
         String chr = cmd.getOptionValue("chr");
         String startStr = cmd.getOptionValue("start");
