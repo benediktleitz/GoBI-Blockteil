@@ -1,9 +1,6 @@
 package blockteil.filters;
 
-import blockteil.Config;
-
 import java.util.BitSet;
-import java.util.Set;
 
 public abstract class KMERFilterer {
     

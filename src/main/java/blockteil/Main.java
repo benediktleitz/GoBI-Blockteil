@@ -1,17 +1,12 @@
 package blockteil;
 
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import blockteil.reference.*;
 import blockteil.readprocessing.ReadEinleseroutine;
 import blockteil.readprocessing.Writer;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.lang.OutOfMemoryError;
-import java.lang.Runtime;
 
 
 public class Main {

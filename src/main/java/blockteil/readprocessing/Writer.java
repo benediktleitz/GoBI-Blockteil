@@ -6,7 +6,6 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 

@@ -6,7 +6,6 @@ import blockteil.KMER;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.Map;
-import java.util.HashSet;
 import java.util.stream.Stream;
 import java.nio.file.Paths;
 import java.util.Set;
