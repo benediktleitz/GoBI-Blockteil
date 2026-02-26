@@ -5,6 +5,7 @@ import blockteil.KMER;
 
 import java.io.File;
 import java.lang.Runtime;
+import java.util.Map;
 
 
 import htsjdk.samtools.reference.ReferenceSequence;
@@ -12,7 +13,7 @@ import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
-public class ReferenceKMERSetCreator {
+public abstract class ReferenceKMERSetCreator {
 
     protected final ReferenceSequenceFile fastaSequenceFile;
 
@@ -42,6 +43,13 @@ public class ReferenceKMERSetCreator {
             }
         }
     }
+
+    public abstract void addKMERS(Gene g);
+
+    public abstract void addKMERS(String geneFilePath, Map<String, Gene> id2Gene);
+
+
+
 
 
 }

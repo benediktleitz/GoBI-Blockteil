@@ -2,6 +2,9 @@ package blockteil;
 
 import blockteil.filters.*;
 
+import blockteil.reference.DNAReferenceCreator;
+import blockteil.reference.RNAReferenceCreator;
+import blockteil.reference.ReferenceKMERSetCreator;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
@@ -17,6 +20,7 @@ public class Config {
     public static boolean WRITE_COUNT;
     public static boolean WRITE_TSV;
     public static KMERFilterer KMER_FILTERER;
+    public static ReferenceKMERSetCreator REFERENCE_KMER_SET_CREATOR;
 
     public static void init(CmdLineReader cmd) {
         try {
@@ -45,6 +49,13 @@ public class Config {
         if(THRESHOLD <= KMER_LENGTH) KMER_FILTERER = new SmallThresholdFilterer();
         else if(OFFSET >= KMER_LENGTH) KMER_FILTERER = new BigOffsetKMERFilterer();
         else KMER_FILTERER = new GeneralKMERFilterer();
+
+        if(cmd.hasOption("rna")){
+            REFERENCE_KMER_SET_CREATOR = new RNAReferenceCreator(cmd.getOptionValue("fasta"));
+        }
+        else {
+            REFERENCE_KMER_SET_CREATOR = new DNAReferenceCreator(cmd.getOptionValue("fasta"));
+        }
     }
 
     public static void setGeneArray(String[] geneArray) {

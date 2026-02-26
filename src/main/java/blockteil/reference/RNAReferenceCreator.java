@@ -7,12 +7,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Stream;
 
-public class TranscriptReferenceCreator extends ReferenceKMERSetCreator{
+public class RNAReferenceCreator extends ReferenceKMERSetCreator{
     private List<Gene> consideredGenes;
 
-    public TranscriptReferenceCreator(String fastaPath) {
+    public RNAReferenceCreator(String fastaPath) {
         super(fastaPath);
     }
 
@@ -31,7 +30,7 @@ public class TranscriptReferenceCreator extends ReferenceKMERSetCreator{
         System.exit(1);
     }
 
-    public void addKMERS(String geneFilePath, HashMap<String, Gene> id2Gene) {
+    public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
         if (geneFilePath == null) {
             Config.setGeneArray(getIdArray(id2Gene)); // no genes list -> all transcripts in GTF file
         } else {
@@ -43,7 +42,7 @@ public class TranscriptReferenceCreator extends ReferenceKMERSetCreator{
         }
     }
 
-    public String[] getIdArray(String filePath, HashMap<String, Gene> id2gene) {
+    public String[] getIdArray(String filePath, Map<String, Gene> id2gene) {
         List<Gene> consideredGenes = new ArrayList<>();
         List<RegionVector> transcripts = new ArrayList<>();
         try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
@@ -63,7 +62,7 @@ public class TranscriptReferenceCreator extends ReferenceKMERSetCreator{
         return assignedIndices(transcripts);
     }
 
-    private String[] getIdArray(HashMap<String, Gene> id2gene) {
+    private String[] getIdArray(Map<String, Gene> id2gene) {
         List<RegionVector> transcripts = new ArrayList<>();
         for(Gene g : id2gene.values()){
             transcripts.addAll(g.id2RegionVector.values());
