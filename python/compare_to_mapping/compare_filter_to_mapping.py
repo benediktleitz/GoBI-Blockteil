@@ -33,7 +33,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a summary file for comparison from read lists for mapping results vs filter tsv for specific genes.")
     parser.add_argument("--filter-result", required=True, help="Path to the filter result tsv file")
-    parser.add_argument("--read_lists", required=True, help="Path to the directory containing the list of reads per gene (one file per gene).")
+    parser.add_argument("--read-lists", required=True, help="Path to the directory containing the list of reads per gene (one file per gene).")
     parser.add_argument("--od", required=True, help="Path to the output directory where the summary output will be saved.")
     
     args = parser.parse_args()
