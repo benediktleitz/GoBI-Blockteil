@@ -32,7 +32,7 @@ public class DNAReferenceCreator extends ReferenceKMERSetCreator {
             gene = id2Gene.get(Config.GENE_ARRAY[i]);
             if(gene == null) continue;
             byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
-            addKMERS(referenceBases, 0, 0, referenceBases.length);
+            addKMERS(referenceBases, i, 0, referenceBases.length);
         }
     }
 
