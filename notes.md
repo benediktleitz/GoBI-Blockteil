@@ -32,7 +32,6 @@ read handler static
 
 
 
-
 ### fragen
 output format (ids, liste, reads, fastq) (= input für gtamap)
 paired-end:
@@ -139,3 +138,15 @@ merge files and compare
 ## Todos
 check N in sequences (or any char other than A,C,G,T)
 check chunk size for efficient parallelization
+
+
+## 27.02
+
+paired end
+repeats
+check N in sequences (or any char other than A,C,G,T)
+
+nach parameter (check chunk size for efficient parallelization)
+
+
+

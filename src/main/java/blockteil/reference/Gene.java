@@ -22,6 +22,7 @@ public class Gene {
         this.chromosome = chromosome;
         this.start = start;
         this.end = end;
+        this.id2RegionVector = new HashMap<>();
     }
 
     public void add_exon(String transcript_id, Pair pair) {

@@ -1,24 +1,28 @@
 package blockteil.reference;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
-public class RNAEinleseroutine {
-    public HashMap<String, Gene> id2gene;
+public class RNAEinleseroutine extends Einleseroutine {
     private static final char SEP = '\t';
     private final String[] geneSearchStrings = {"gene_id", "gene_biotype"};
     private final String[] transcriptSearchStrings = {"transcript_id", "gene_id"};
+    private final String filePath;
 
 
-    public RNAEinleseroutine() {
-        this.id2gene = new HashMap<>(100000);
+    public RNAEinleseroutine(String filePath) {
+        this.filePath = filePath;
+        this.id2gene = new HashMap<>(30000);
+
     }
 
-    public HashMap<String, Gene> read(String gtf_path){
-        try (BufferedReader br = new BufferedReader(new FileReader(gtf_path))) {
+    public Map<String, Gene> read(){
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(
+                        new GZIPInputStream(
+                                new FileInputStream(filePath))))) {
             String line;
             String[] row = new String[9];
             HashMap<String, String> attributes = new HashMap<>(3);
@@ -33,7 +37,7 @@ public class RNAEinleseroutine {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error reading GTF file: " + gtf_path);
+            System.err.println("Error reading GTF file: " + filePath);
             e.printStackTrace();
         }
         return id2gene;

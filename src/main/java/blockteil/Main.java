@@ -39,12 +39,12 @@ public class Main {
             Gene g = new Gene(null, chr, start, end);
             creator.addKMERS(g);
         } else if (genes != null && gtf != null) {
-            Einleseroutine reader = new Einleseroutine(gtf);
+            Einleseroutine reader = Config.EINLESEROUTINE;
             reader.read();
             creator.addKMERS(genes, reader.id2gene);
         } else if (gtf != null){
             try {
-                Einleseroutine reader = new Einleseroutine(gtf);
+                Einleseroutine reader = Config.EINLESEROUTINE;
                 reader.read();
                 creator.addKMERS(null, reader.id2gene); // no genes list -> all genes in GTF file
             } catch (OutOfMemoryError e) {
