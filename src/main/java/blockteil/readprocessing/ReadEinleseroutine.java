@@ -31,6 +31,7 @@ public class ReadEinleseroutine {
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
             ) {
             writers = Writer.makeBufferedWriters(outputDir);
+            final BufferedWriter[] sharedWriters = writers;
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;
             String line_rw;
@@ -55,7 +56,7 @@ public class ReadEinleseroutine {
                     List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
                     futures.add(executor.submit(() -> {
                         List<FastqRecord> processed = processChunk(chunkToProcess);
-                        Writer.writeChunk(processed, writers, writeLock);
+                        Writer.writeChunk(processed, sharedWriters, writeLock);
                     }));
                     chunk.clear();
                 }
@@ -66,7 +67,7 @@ public class ReadEinleseroutine {
                 List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
                 futures.add(executor.submit(() -> {
                     List<FastqRecord> processed = processChunk(chunkToProcess);
-                    Writer.writeChunk(processed, writers, writeLock);
+                    Writer.writeChunk(processed, sharedWriters, writeLock);
                 }));
             }
 
