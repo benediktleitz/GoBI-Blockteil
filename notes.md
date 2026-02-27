@@ -148,5 +148,11 @@ check N in sequences (or any char other than A,C,G,T)
 
 nach parameter (check chunk size for efficient parallelization)
 
+python script anpassen (input transcript ids)
+
+python script mehr vektorisieren (?) 
+bessere engine zum einlesen
+
+
 
 
