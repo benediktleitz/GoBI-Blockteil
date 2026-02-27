@@ -16,15 +16,6 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
         super(fastaPath);
     }
 
-    public void addAllTranscriptKMERS_DEPRECATED(Gene gene){
-        byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
-        for(RegionVector rv : gene.id2RegionVector.values()){
-            for(Pair exon : rv.pair_regions){
-                addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1); // incl start, excl end
-            }
-        }
-    }
-
     public void addAllTranscriptKMERS(Gene gene){
         byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
         List<Pair> exons;
@@ -35,7 +26,8 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
             long kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1);
             for(int i = 1; i < exons.size(); i++){
                 exon = exons.get(i);
-                kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);            }
+                kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);
+            }
         }
     }
 

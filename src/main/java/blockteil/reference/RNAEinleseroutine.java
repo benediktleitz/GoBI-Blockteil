@@ -8,7 +8,7 @@ import java.util.zip.GZIPInputStream;
 public class RNAEinleseroutine extends Einleseroutine {
     private static final char SEP = '\t';
     private final String[] geneSearchStrings = {"gene_id", "gene_biotype"};
-    private final String[] transcriptSearchStrings = {"transcript_id", "gene_id"};
+    private final String[] transcriptSearchStrings = {"transcript_id", "gene_id", "gene_biotype"};
     private final String filePath;
 
 
@@ -56,6 +56,7 @@ public class RNAEinleseroutine extends Einleseroutine {
 
     public void parse_exon(String[] tokens, HashMap<String, String> attributes) {
         getAttributes(attributes, tokens[8], transcriptSearchStrings);
+        if (attributes.get("gene_biotype") == null || !attributes.get("gene_biotype").equals("protein_coding")) return;
         String transcript_id = attributes.get("transcript_id");
         if(transcript_id == null) return;
         String gene_id = attributes.get("gene_id");
