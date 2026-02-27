@@ -10,7 +10,7 @@ RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
 GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch1/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch1}"
+OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch2}"
 MAX_PARALLEL="${MAX_PARALLEL:-8}"
 
 if [[ ! -f "$JAR" ]]; then
@@ -30,19 +30,9 @@ fi
 mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
-declare -a OFFSETS=()
-for o in $(seq 1 5 30); do
-  OFFSETS+=("$o")
-done
-
 declare -a K_VALUES=()
 for k in $(seq 5 5 30); do
   K_VALUES+=("$k")
-done
-
-declare -a THRESHOLDS=()
-for t in $(seq 10 20 110); do
-  THRESHOLDS+=("$t")
 done
 
 join_by() {
@@ -51,7 +41,12 @@ join_by() {
   echo "$*"
 }
 
-total_runs=$(( ${#K_VALUES[@]} * ${#OFFSETS[@]} * ${#THRESHOLDS[@]} ))
+total_runs=0
+for k in "${K_VALUES[@]}"; do
+  for threshold in $(seq $((3 * k)) "$k" 150); do
+    total_runs=$((total_runs + 1))
+  done
+done
 run_idx=0
 executed_runs=0
 copied_runs=0
@@ -88,6 +83,7 @@ run_one() {
       -genes "$GENES" \
       -tsv \
       -counts \
+      -rna \
       > "$run_log" 2>&1
 
   local elapsed
@@ -182,69 +178,29 @@ copy_equivalent_outputs() {
 
 echo "Starting grid search"
 echo "K: $(join_by , "${K_VALUES[@]}")"
-echo "Offset: $(join_by , "${OFFSETS[@]}")"
-echo "Threshold: $(join_by , "${THRESHOLDS[@]}")"
+echo "Offset: k (for each k)"
+echo "Threshold: n*k for n>=3 and threshold<=150"
 echo "Parallel Java runs: up to $MAX_PARALLEL"
 echo "Total runs: $total_runs"
 echo "Time summary: $TIME_SUMMARY"
 
 for k in "${K_VALUES[@]}"; do
-  for offset in "${OFFSETS[@]}"; do
-    executed_threshold=""
-    executed_dir=""
-    copy_jobs=()
-    pids=()
+  offset="$k"
+  pids=()
 
-    for threshold in "${THRESHOLDS[@]}"; do
-      run_idx=$((run_idx + 1))
-      out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}"
-      mkdir -p "$out_dir"
+  for threshold in $(seq $((3 * k)) "$k" 150); do
+    run_idx=$((run_idx + 1))
+    out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}"
+    mkdir -p "$out_dir"
 
-      if (( threshold <= k )); then
-        if [[ -z "$executed_threshold" ]]; then
-          echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
-          throttle_jobs pids
-          run_one "$k" "$offset" "$threshold" "$out_dir" &
-          pids+=("$!")
-          executed_threshold="$threshold"
-          executed_dir="$out_dir"
-          executed_runs=$((executed_runs + 1))
-        else
-          echo "[$run_idx/$total_runs] COPY    k=$k offset=$offset threshold=$threshold (from threshold=$executed_threshold, deferred)"
-          copy_jobs+=("${threshold}:${out_dir}")
-          copied_runs=$((copied_runs + 1))
-        fi
-      else
-        echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
-        throttle_jobs pids
-        run_one "$k" "$offset" "$threshold" "$out_dir" &
-        pids+=("$!")
-        executed_runs=$((executed_runs + 1))
-      fi
-    done
-
-    wait_for_jobs pids
-
-    for job in "${copy_jobs[@]}"; do
-      threshold="${job%%:*}"
-      out_dir="${job#*:}"
-      copy_equivalent_outputs "$executed_dir" "$out_dir" "$executed_threshold"
-      append_copied_row "$k" "$offset" "$threshold" "$executed_threshold" "$executed_dir" "$out_dir"
-      {
-        echo "k=${k}"
-        echo "offset=${offset}"
-        echo "threshold=${threshold}"
-        echo "mode=copied"
-        echo "source_threshold=${executed_threshold}"
-        echo "elapsed=$(awk -F'\t' 'NR==1 {print $6}' "$out_dir/time_row.tsv")"
-        echo "user_sec=$(awk -F'\t' 'NR==1 {print $7}' "$out_dir/time_row.tsv")"
-        echo "system_sec=$(awk -F'\t' 'NR==1 {print $8}' "$out_dir/time_row.tsv")"
-        echo "max_rss_kb=$(awk -F'\t' 'NR==1 {print $9}' "$out_dir/time_row.tsv")"
-        echo "time_file=$executed_dir/time_verbose.txt"
-        echo "run_log=$executed_dir/run.log"
-      } > "$out_dir/time_summary.txt"
-    done
+    echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
+    throttle_jobs pids
+    run_one "$k" "$offset" "$threshold" "$out_dir" &
+    pids+=("$!")
+    executed_runs=$((executed_runs + 1))
   done
+
+  wait_for_jobs pids
 done
 
 write_global_summary
