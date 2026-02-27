@@ -31,7 +31,7 @@ mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a K_VALUES=()
-for k in $(seq 5 5 30); do
+for k in $(seq 12 3 30); do
   K_VALUES+=("$k")
 done
 
