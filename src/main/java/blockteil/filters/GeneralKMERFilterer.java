@@ -23,7 +23,6 @@ public class GeneralKMERFilterer extends KMERFilterer {
                 if (matched == null) {
                     matched = new BitSet();
                     geneToMatchedPositions[gene] = matched;
-                    Config.COUNT_ARRAY.incrementAndGet(gene);
                 }
                 matched.set(i, i + Config.KMER_LENGTH);
                 if (Config.EARLY_TERMINATION_ALLOWED && matched.cardinality() >= Config.THRESHOLD) break A;
@@ -37,6 +36,7 @@ public class GeneralKMERFilterer extends KMERFilterer {
             int matchedCount = matched == null ? 0 : matched.cardinality();
             if (matchedCount >= Config.THRESHOLD) {
                 out.set(gene);
+                Config.COUNT_ARRAY.incrementAndGet(gene);
             }
         }
         return out;

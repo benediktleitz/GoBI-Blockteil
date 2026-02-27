@@ -107,6 +107,9 @@ public class CmdLineReader {
                 .desc("optional flag to test RNA-Seq data")
                 .build();
 
+        Option or = Option.builder("or")
+                .desc("optional flag to use OR instead of AND for filtering to combine filtering of pair-end reads")
+                .build();
 
 
         options.addOption(fw);
@@ -125,6 +128,7 @@ public class CmdLineReader {
         options.addOption(tsv);
         options.addOption(counts);
         options.addOption(rna);
+        options.addOption(or);
         return options;
     }
 

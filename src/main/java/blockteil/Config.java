@@ -23,6 +23,7 @@ public class Config {
     public static boolean WRITE_TSV;
     public static KMERFilterer KMER_FILTERER;
     public static ReferenceKMERSetCreator REFERENCE_KMER_SET_CREATOR;
+    public static boolean OR;
 
     public static void init(CmdLineReader cmd) {
         try {
@@ -58,6 +59,7 @@ public class Config {
         else {
             REFERENCE_KMER_SET_CREATOR = new DNAReferenceCreator(cmd.getOptionValue("fasta"));
         }
+        OR = cmd.hasOption("or");
     }
 
     public static void setGeneArray(String[] geneArray) {

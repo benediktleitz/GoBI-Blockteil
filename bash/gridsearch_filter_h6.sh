@@ -31,19 +31,21 @@ mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a OFFSETS=()
-for o in $(seq 1 31); do
+for o in $(seq 1 5 30); do
   OFFSETS+=("$o")
 done
-for o in 35 40 45 50; do
-  OFFSETS+=("$o")
+
+declare -a K_VALUES=()
+for k in $(seq 5 5 30); do
+  K_VALUES+=("$k")
 done
 
 declare -a THRESHOLDS=()
-for t in $(seq 10 10 100); do
+for t in $(seq 10 20 110); do
   THRESHOLDS+=("$t")
 done
 
-total_runs=$((28 * ${#OFFSETS[@]} * ${#THRESHOLDS[@]}))
+total_runs=$(( ${#K_VALUES[@]} * ${#OFFSETS[@]} * ${#THRESHOLDS[@]} ))
 run_idx=0
 executed_runs=0
 copied_runs=0
@@ -161,14 +163,14 @@ copy_equivalent_outputs() {
 }
 
 echo "Starting grid search"
-echo "K: 5..32"
-echo "Offset: 1..31 and 35,40,45,50"
+echo "K: 5,10,15,20,25,30"
+echo "Offset: 3,6,9,...,30"
 echo "Threshold: 10..100 step 10"
 echo "Parallel Java runs: up to $MAX_PARALLEL"
 echo "Total runs: $total_runs"
 echo "Time summary: $TIME_SUMMARY"
 
-for k in $(seq 5 32); do
+for k in "${K_VALUES[@]}"; do
   for offset in "${OFFSETS[@]}"; do
     executed_threshold=""
     executed_dir=""

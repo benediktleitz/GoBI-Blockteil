@@ -19,7 +19,6 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
             if (matchingGenes == null) continue;
 
             for (Integer gene : matchingGenes) {
-                if (geneToMatchedPositions[gene] == 0) Config.COUNT_ARRAY.incrementAndGet(gene);
                 geneToMatchedPositions[gene] += Config.KMER_LENGTH;
                 if (Config.EARLY_TERMINATION_ALLOWED && geneToMatchedPositions[gene] >= Config.THRESHOLD) break A;
             }
@@ -31,6 +30,7 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
             int matched = geneToMatchedPositions[gene];
             if (matched >= Config.THRESHOLD) {
                 out.set(gene);
+                Config.COUNT_ARRAY.incrementAndGet(gene);
             }
         }
         return out;
