@@ -1,6 +1,7 @@
 package blockteil.reference;
 
 import blockteil.Config;
+import blockteil.KMER;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,6 +19,23 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
     public void addAllTranscriptKMERS(Gene gene){
         byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
         for(RegionVector rv : gene.id2RegionVector.values()){
+            for(Pair exon : rv.pair_regions){
+                addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1); // incl start, excl end
+            }
+        }
+    }
+
+    public void addAllTranscriptKmersJunctions(Gene gene){
+        byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
+        List<Pair> exons;
+        int index;
+        for(RegionVector rv : gene.id2RegionVector.values()){
+            exons = rv.get_sorted_pair_regions();
+            index = exons.getFirst().start - gene.start;
+            long kmer = KMER.makeKMER(referenceBases, index);
+            index = index + Config.KMER_LENGTH;
+
+
             for(Pair exon : rv.pair_regions){
                 addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1); // incl start, excl end
             }
