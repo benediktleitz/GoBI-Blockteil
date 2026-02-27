@@ -45,6 +45,12 @@ for t in $(seq 10 20 110); do
   THRESHOLDS+=("$t")
 done
 
+join_by() {
+  local IFS="$1"
+  shift
+  echo "$*"
+}
+
 total_runs=$(( ${#K_VALUES[@]} * ${#OFFSETS[@]} * ${#THRESHOLDS[@]} ))
 run_idx=0
 executed_runs=0
@@ -55,7 +61,7 @@ echo -e "k\toffset\tthreshold\tmode\tsource_threshold\telapsed\tuser_sec\tsystem
 extract_time_metric() {
   local key="$1"
   local file="$2"
-  awk -F': ' -v k="$key" '$0 ~ k {print $2; exit}' "$file"
+  awk -F': ' -v k="$key" 'index($0, k) {print $NF; exit}' "$file"
 }
 
 run_one() {
@@ -88,7 +94,7 @@ run_one() {
   local user_sec
   local system_sec
   local max_rss
-  elapsed="$(extract_time_metric "Elapsed (wall clock) time" "$time_file")"
+  elapsed="$(extract_time_metric "Elapsed (wall clock) time (h:mm:ss or m:ss)" "$time_file")"
   user_sec="$(extract_time_metric "User time (seconds)" "$time_file")"
   system_sec="$(extract_time_metric "System time (seconds)" "$time_file")"
   max_rss="$(extract_time_metric "Maximum resident set size (kbytes)" "$time_file")"
@@ -117,8 +123,20 @@ append_copied_row() {
   local src_threshold="$4"
   local src_dir="$5"
   local out_dir="$6"
+  local src_row="$src_dir/time_row.tsv"
+  local elapsed="NA"
+  local user_sec="NA"
+  local system_sec="NA"
+  local max_rss="NA"
 
-  echo -e "${k}\t${offset}\t${threshold}\tcopied\t${src_threshold}\tNA\tNA\tNA\tNA\t$src_dir/time_verbose.txt" > "$out_dir/time_row.tsv"
+  if [[ -f "$src_row" ]]; then
+    elapsed="$(awk -F'\t' 'NR==1 {print $6}' "$src_row")"
+    user_sec="$(awk -F'\t' 'NR==1 {print $7}' "$src_row")"
+    system_sec="$(awk -F'\t' 'NR==1 {print $8}' "$src_row")"
+    max_rss="$(awk -F'\t' 'NR==1 {print $9}' "$src_row")"
+  fi
+
+  echo -e "${k}\t${offset}\t${threshold}\tcopied\t${src_threshold}\t${elapsed}\t${user_sec}\t${system_sec}\t${max_rss}\t$src_dir/time_verbose.txt" > "$out_dir/time_row.tsv"
 }
 
 throttle_jobs() {
@@ -163,9 +181,9 @@ copy_equivalent_outputs() {
 }
 
 echo "Starting grid search"
-echo "K: 5,10,15,20,25,30"
-echo "Offset: 3,6,9,...,30"
-echo "Threshold: 10..100 step 10"
+echo "K: $(join_by , "${K_VALUES[@]}")"
+echo "Offset: $(join_by , "${OFFSETS[@]}")"
+echo "Threshold: $(join_by , "${THRESHOLDS[@]}")"
 echo "Parallel Java runs: up to $MAX_PARALLEL"
 echo "Total runs: $total_runs"
 echo "Time summary: $TIME_SUMMARY"
@@ -218,10 +236,10 @@ for k in "${K_VALUES[@]}"; do
         echo "threshold=${threshold}"
         echo "mode=copied"
         echo "source_threshold=${executed_threshold}"
-        echo "elapsed=NA"
-        echo "user_sec=NA"
-        echo "system_sec=NA"
-        echo "max_rss_kb=NA"
+        echo "elapsed=$(awk -F'\t' 'NR==1 {print $6}' "$out_dir/time_row.tsv")"
+        echo "user_sec=$(awk -F'\t' 'NR==1 {print $7}' "$out_dir/time_row.tsv")"
+        echo "system_sec=$(awk -F'\t' 'NR==1 {print $8}' "$out_dir/time_row.tsv")"
+        echo "max_rss_kb=$(awk -F'\t' 'NR==1 {print $9}' "$out_dir/time_row.tsv")"
         echo "time_file=$executed_dir/time_verbose.txt"
         echo "run_log=$executed_dir/run.log"
       } > "$out_dir/time_summary.txt"

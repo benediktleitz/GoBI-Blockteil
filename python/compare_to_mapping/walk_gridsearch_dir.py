@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import re
 import subprocess
@@ -38,7 +39,32 @@ def _extract_grid_params(gridsearch_dir, summary_file):
     return k, offset, threshold
 
 
-def create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script):
+def _run_single_comparison(matrix_dir, read_lists_dir, compare_script):
+    filter_result = os.path.join(matrix_dir, "read2gene_matrix.tsv")
+    cmd = [
+        sys.executable,
+        compare_script,
+        "--filter-result",
+        filter_result,
+        "--read-lists",
+        read_lists_dir,
+        "--od",
+        matrix_dir,
+    ]
+
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return True, matrix_dir, ""
+    except subprocess.CalledProcessError as exc:
+        details = ""
+        if exc.stdout:
+            details += exc.stdout.strip() + "\n"
+        if exc.stderr:
+            details += exc.stderr.strip()
+        return False, matrix_dir, details.strip()
+
+
+def create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script, threads):
     matrix_dirs = _find_matrix_dirs(gridsearch_dir)
     if not matrix_dirs:
         print("No read2gene_matrix.tsv files found in the gridsearch directory.")
@@ -46,30 +72,24 @@ def create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script):
 
     created = 0
     failed = 0
+    total = len(matrix_dirs)
 
-    for matrix_dir in matrix_dirs:
-        filter_result = os.path.join(matrix_dir, "read2gene_matrix.tsv")
-        cmd = [
-            sys.executable,
-            compare_script,
-            "--filter-result",
-            filter_result,
-            "--read-lists",
-            read_lists_dir,
-            "--od",
-            matrix_dir,
-        ]
-        print("Now running:", " ".join(cmd))
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            created += 1
-        except subprocess.CalledProcessError as exc:
-            failed += 1
-            print(f"Failed for {matrix_dir}")
-            if exc.stdout:
-                print(exc.stdout.strip())
-            if exc.stderr:
-                print(exc.stderr.strip())
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        future_to_dir = {
+            executor.submit(_run_single_comparison, matrix_dir, read_lists_dir, compare_script): matrix_dir
+            for matrix_dir in matrix_dirs
+        }
+
+        for done_idx, future in enumerate(as_completed(future_to_dir), start=1):
+            success, matrix_dir, details = future.result()
+            if success:
+                created += 1
+                print(f"Done ({done_idx}/{total}): {matrix_dir}")
+            else:
+                failed += 1
+                print(f"Failed ({done_idx}/{total}): {matrix_dir}")
+                if details:
+                    print(details)
 
     return created, failed
 
@@ -130,11 +150,18 @@ def main():
         default=os.path.join(os.path.dirname(__file__), "compare_filter_to_mapping.py"),
         help="Path to compare_filter_to_mapping.py",
     )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        help="Number of parallel threads for comparison_summary generation (default: 1)",
+    )
     args = parser.parse_args()
 
     gridsearch_dir = os.path.abspath(args.gridsearch_dir)
     read_lists_dir = os.path.join(gridsearch_dir, "read-lists")
     compare_script = os.path.abspath(args.compare_script)
+    threads = args.threads
 
     if not os.path.isdir(gridsearch_dir):
         raise FileNotFoundError(f"Gridsearch directory not found: {gridsearch_dir}")
@@ -142,12 +169,15 @@ def main():
         raise FileNotFoundError(f"Read-lists directory not found: {read_lists_dir}")
     if not os.path.isfile(compare_script):
         raise FileNotFoundError(f"Compare script not found: {compare_script}")
+    if threads <= 0:
+        raise ValueError(f"--threads must be >= 1, got: {threads}")
 
     print(f"Gridsearch dir: {gridsearch_dir}")
     print(f"Read-lists dir: {read_lists_dir}")
     print(f"Compare script: {compare_script}")
+    print(f"Threads: {threads}")
 
-    created, failed = create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script)
+    created, failed = create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script, threads)
     print(f"comparison_summary.tsv generated: {created}, failed: {failed}")
 
     combine_comparison_summaries(gridsearch_dir)
