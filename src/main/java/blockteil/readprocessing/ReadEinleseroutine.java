@@ -23,13 +23,14 @@ public class ReadEinleseroutine {
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
         List<Future<?>> futures = new ArrayList<>();
+        BufferedWriter[] writers = null;
 
         try (BufferedReader br_fw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(fw_file))));
              BufferedReader br_rw = new BufferedReader(
                  new InputStreamReader(new GZIPInputStream(new FileInputStream(rw_file))));
             ) {
-            BufferedWriter[] writers = Writer.makeBufferedWriters(outputDir);
+            writers = Writer.makeBufferedWriters(outputDir);
             List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
             String line_fw;
             String line_rw;
@@ -82,6 +83,16 @@ public class ReadEinleseroutine {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (writers != null) {
+                for (BufferedWriter writer : writers) {
+                    if (writer == null) continue;
+                    try {
+                        writer.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
             executor.shutdown();
             try {
                 executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
