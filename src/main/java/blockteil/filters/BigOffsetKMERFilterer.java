@@ -30,7 +30,6 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
             int matched = geneToMatchedPositions[gene];
             if (matched >= Config.THRESHOLD) {
                 out.set(gene);
-                Config.COUNT_ARRAY.incrementAndGet(gene);
             }
         }
         return out;

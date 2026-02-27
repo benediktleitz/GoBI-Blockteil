@@ -36,7 +36,6 @@ public class GeneralKMERFilterer extends KMERFilterer {
             int matchedCount = matched == null ? 0 : matched.cardinality();
             if (matchedCount >= Config.THRESHOLD) {
                 out.set(gene);
-                Config.COUNT_ARRAY.incrementAndGet(gene);
             }
         }
         return out;
