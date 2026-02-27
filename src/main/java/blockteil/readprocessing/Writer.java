@@ -72,7 +72,7 @@ public class Writer {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile.toFile()))) {
             bw.write("gene\tcount\n");
             for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
-                bw.write(Config.GENE_ARRAY[i] + "\t" + Config.COUNT_ARRAY[i] + "\n");
+                bw.write(Config.GENE_ARRAY[i] + "\t" + Config.COUNT_ARRAY.get(i) + "\n");
             }
         } catch (IOException e) {
             e.printStackTrace();

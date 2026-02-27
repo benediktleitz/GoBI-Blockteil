@@ -6,11 +6,13 @@ import blockteil.reference.*;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
+import java.util.concurrent.atomic.AtomicIntegerArray;
+
 public class Config {
     public static int OFFSET;
     public static final Long2ObjectOpenHashMap<IntOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
     public static String[] GENE_ARRAY;
-    public static int[] COUNT_ARRAY;
+    public static AtomicIntegerArray COUNT_ARRAY;
     public static int THRESHOLD;
     public static int KMER_LENGTH;
     public static boolean EARLY_TERMINATION_ALLOWED;
@@ -62,7 +64,7 @@ public class Config {
 
     public static void setGeneArray(String[] geneArray) {
         GENE_ARRAY = geneArray;
-        COUNT_ARRAY = new int[geneArray.length];
+        COUNT_ARRAY = new AtomicIntegerArray(geneArray.length);
         if (geneArray.length == 1) {
             EARLY_TERMINATION_ALLOWED = true; // if only one gene, we can terminate early as soon as we find a match
         }
