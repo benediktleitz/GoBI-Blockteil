@@ -29,6 +29,28 @@ def make_gene_to_position_dict(gtf_file, gene_list_file):
             print(f"Warning: Gene {gene_id} not found in GTF file.")
     return genes2positions
 
+def make_transcript_to_position_dict(gtf_file, gene_list_file):
+    gtf = pr.read_gtf(gtf_file).df
+
+    with open(gene_list_file, 'r') as f:
+        genes_of_interest = set(line.strip() for line in f)
+
+    transcript_rows = gtf[
+        (gtf.Feature == "transcript") &
+        (gtf.gene_id.isin(genes_of_interest))
+    ]
+
+    transcripts2positions = {}
+
+    for _, row in transcript_rows.iterrows():
+        transcripts2positions[row.transcript_id] = (
+            row.Chromosome,
+            row.Start,
+            row.End
+        )
+
+    return transcripts2positions
+
 def write_gene_read_list_pileup(bamfile, chrom, start, end, gene_name, output_dir):
     output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
     os.makedirs(output_dir, exist_ok=True)
@@ -47,17 +69,45 @@ def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir
     output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
     read_ids = set()
     for read in bamfile.fetch(chrom, start, end):
+        if skip_read(read, chrom): continue
         read_ids.add(normalize_read_id(read.query_name))
 
     with open(output_file, 'w') as f:
         for rid in sorted(read_ids):
             f.write(f"{rid}\n")
 
+def skip_read(read, chrom):
+    if read.is_unmapped:
+        return True
+    if read.is_secondary:
+        return True
+    if read.is_supplementary:
+        return True
+    if read.is_duplicate:
+        return True
+    if read.is_qcfail:
+        return True
+    if read.mapping_quality < 20:
+        return True
+    if read.reference_name != chrom:
+        return True
+    if not read.is_proper_pair:
+        return True
+    if read.next_reference_name != chrom:
+        return True
+    
+    return False
+
 def main(args):
-    genes2positions = make_gene_to_position_dict(args.gtf, args.gene_list)
+    if args.rna:
+        transcripts2positions = make_transcript_to_position_dict(args.gtf, args.gene_list)
+        positions = transcripts2positions
+    else:
+        genes2positions = make_gene_to_position_dict(args.gtf, args.gene_list)
+        positions = genes2positions
     bamfile = pysam.AlignmentFile(args.mapping, "rb")
     
-    for gene, (chrom, start, end) in genes2positions.items():
+    for gene, (chrom, start, end) in positions.items():
         if args.method == "pileup":
             write_gene_read_list_pileup(
                 bamfile,
@@ -84,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--gene_list", required=True, help="Path to the file containing the list of genes.")
     parser.add_argument("--gtf", required=True, help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
+    parser.add_argument("--rna", action="store_true", help="Indicates that the transcripts should be considered, not genes.")
     parser.add_argument(
         "--method",
         choices=["fetch", "pileup"],
