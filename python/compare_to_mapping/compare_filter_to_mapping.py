@@ -12,7 +12,7 @@ def normalize_read_id_series(series):
     )
 
 
-def compare_filter_to_mapping(gene, filter_sets, read_lists_dir):
+def compare_filter_to_mapping(gene, filter_sets, read_lists_dir, bam_file_path=None):
     filter_reads = filter_sets.get(gene, set())
 
     read_list_file = os.path.join(read_lists_dir, f"{gene}_reads.txt")
@@ -29,9 +29,11 @@ def compare_filter_to_mapping(gene, filter_sets, read_lists_dir):
     matched = len(filter_reads & mapping_reads)
     not_mapped = len(filter_reads - mapping_reads)
     not_filtered = len(mapping_reads - filter_reads)
-    if not_filtered > 0:
+    if not_filtered > 0 and bam_file_path:
         not_filtered_sample = list(mapping_reads - filter_reads)
-        print(f"Gene: {gene}, Not Filtered: {not_filtered_sample}")
+        with open(bam_file_path, "a") as bam_file:
+            for read_id in not_filtered_sample:
+                bam_file.write(f"{read_id}\n")
 
     return (gene, len(filter_reads), len(mapping_reads),
             matched, not_mapped, not_filtered)
@@ -70,7 +72,7 @@ def main(args):
 
     for gene in genes:
         summary_data.append(
-            compare_filter_to_mapping(gene, filter_sets, args.read_lists)
+            compare_filter_to_mapping(gene, filter_sets, args.read_lists, args.bam)
         )
 
     output_path = os.path.abspath(
@@ -93,6 +95,8 @@ if __name__ == "__main__":
                         help="Path to the directory containing the list of reads per gene (one file per gene).")
     parser.add_argument("--od", required=True,
                         help="Path to the output directory where the summary output will be saved.")
+    parser.add_argument("--bam", required=False,
+                        help="Path to the BAM file containing the mapped reads (optional, for additional validation).")
 
     args = parser.parse_args()
     main(args)
