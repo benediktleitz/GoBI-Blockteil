@@ -5,6 +5,7 @@ import blockteil.Config;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,7 +37,7 @@ public class Writer {
             writeTSVChunk(chunk, writers[0]);
             writeFastqChunk(chunk, writers[1], writers[2]);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new UncheckedIOException("Failed to write output chunk", e);
         } finally {
             lock.unlock();
         }
