@@ -142,7 +142,7 @@ check chunk size for efficient parallelization
 
 ## 27.02
 
-paired end
+paired end (correct)
 repeats
 check N in sequences (or any char other than A,C,G,T)
 
@@ -152,6 +152,8 @@ python script anpassen (input transcript ids)
 
 python script mehr vektorisieren (?) 
 bessere engine zum einlesen
+
+first plots
 
 
 
