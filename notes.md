@@ -156,3 +156,20 @@ bessere engine zum einlesen
 
 
 
+## 02.03 
+
+### Sam Gespräch
+
+Wie sollen wir N handeln -> Wird es langsamer machen, wegen 2 if statements pro k-mer
+13.5M reads/1 min mit -rna, -or, k=12, o=12, t=24/36, 5 Gene
+-> Hohes match zu mapping Ergebnis und min 80% rausgefiltert
+Wie mit non-protein coding Genen umgehen? (Wenn wir ne Gen liste bekommen protein-coding ignorieren?)
+SNP Liste als optionalen Input -> Welches Format? Vor allem bei mehreren Genen muss man wissen, welcher SNP Kmer für welches Gen da ist
+
+Output Ordner Berechtigungen
+
+
+### ToDos:
+
+Schauen ob Fastq Output ordentlich
+Gridsearch über k=10 bis k=15 mit or und rna
