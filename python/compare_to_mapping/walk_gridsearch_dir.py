@@ -36,7 +36,9 @@ def _extract_grid_params(gridsearch_dir, summary_file):
     k = _extract_param(r"(?:^|/)k_(\d+)(?:/|$)", rel_path)
     offset = _extract_param(r"(?:^|/)offset_(\d+)(?:/|$)", rel_path)
     threshold = _extract_param(r"(?:^|/)threshold_(\d+)(?:/|$)", rel_path)
-    return k, offset, threshold
+    mode_match = re.search(r"(?:^|/)mode_(or|and)(?:/|$)", rel_path)
+    mode = mode_match.group(1) if mode_match else None
+    return k, offset, threshold, mode
 
 
 def _run_single_comparison(matrix_dir, read_lists_dir, compare_script):
@@ -102,11 +104,12 @@ def combine_comparison_summaries(gridsearch_dir):
 
     all_rows = []
     for summary_file in summary_files:
-        k, offset, threshold = _extract_grid_params(gridsearch_dir, summary_file)
+        k, offset, threshold, mode = _extract_grid_params(gridsearch_dir, summary_file)
         df = pd.read_csv(summary_file, sep="\t")
         df["k"] = k
         df["offset"] = offset
         df["threshold"] = threshold
+        df["mode"] = mode
         df["summary_file"] = os.path.relpath(summary_file, gridsearch_dir)
         all_rows.append(df)
 
@@ -115,6 +118,7 @@ def combine_comparison_summaries(gridsearch_dir):
         "k",
         "offset",
         "threshold",
+        "mode",
         "gene",
         "filtered_reads",
         "mapping_reads",
@@ -123,7 +127,7 @@ def combine_comparison_summaries(gridsearch_dir):
         "not_filtered",
         "summary_file",
     ]]
-    combined_df.sort_values(["k", "offset", "threshold", "gene"], inplace=True)
+    combined_df.sort_values(["k", "offset", "threshold", "mode", "gene"], inplace=True)
 
     output_path = os.path.join(gridsearch_dir, "combined_comparison_summary_long.tsv")
     combined_df.to_csv(output_path, sep="\t", index=False)
@@ -137,7 +141,7 @@ def main():
         description=(
             "Run compare_filter_to_mapping.py for every gridsearch folder containing "
             "read2gene_matrix.tsv, then combine all comparison_summary.tsv files into "
-            "a long-format summary with k/offset/threshold columns."
+            "a long-format summary with k/offset/threshold/mode columns."
         )
     )
     parser.add_argument(
