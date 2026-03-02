@@ -7,6 +7,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Config {
     public static int OFFSET;
@@ -23,6 +24,8 @@ public class Config {
     public static ReferenceKMERSetCreator REFERENCE_KMER_SET_CREATOR;
     public static Einleseroutine EINLESEROUTINE;
     public static boolean OR;
+
+    public static AtomicLong TIMING = new AtomicLong(0);
 
     public static void init(CmdLineReader cmd) {
         try {

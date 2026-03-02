@@ -4,6 +4,7 @@ public class KMER {
 
     private static long mask;
     private static final byte[] BASE_TO_BITS = new byte[128];
+    private static final byte[] BASE_TO_BITS_COMPLEMENT = new byte[128];
 
     public static void init() {
         mask = (1L << (2 * Config.KMER_LENGTH)) - 1;
@@ -11,6 +12,10 @@ public class KMER {
         BASE_TO_BITS['C'] = 0b01;
         BASE_TO_BITS['G'] = 0b10;
         BASE_TO_BITS['T'] = 0b11;
+        BASE_TO_BITS_COMPLEMENT['A'] = 0b11; 
+        BASE_TO_BITS_COMPLEMENT['C'] = 0b10; 
+        BASE_TO_BITS_COMPLEMENT['G'] = 0b01; 
+        BASE_TO_BITS_COMPLEMENT['T'] = 0b00;
     }
 
     public static long makeKMER(byte[] sequence, int start) {
@@ -22,16 +27,21 @@ public class KMER {
         return kmer & mask;
     }
 
-    public static long makeKMER(byte[] sequence) {
-        return makeKMER(sequence, 0);
-    }
-
     public static long makeKMER(String sequence, int start) {
         return makeKMER(sequence.getBytes(), start);
     }
 
-    public static long makeKMER(String sequence) {
-        return makeKMER(sequence.getBytes(), 0);
+    public static long makeKMER_revcomp(byte[] sequence, int start) {
+        long kmer = 0;
+        for(int i = Config.KMER_LENGTH - 1; i >= 0; i--) {
+            kmer <<= 2;
+            kmer |= BASE_TO_BITS_COMPLEMENT[sequence[start + i]];
+        }
+        return kmer & mask;
+    }
+
+    public static long makeKMER_revcomp(String sequence, int start) {
+        return makeKMER_revcomp(sequence.getBytes(), start);
     }
 
     public static long shiftKMER(long kmer, char nextChar) {
@@ -40,23 +50,18 @@ public class KMER {
         return kmer & mask;
     }
 
+    public static long shiftKMER_revcomp(long kmer, char nextChar) {
+        kmer >>>= 2;
+        kmer |= ((long) BASE_TO_BITS_COMPLEMENT[nextChar]) << (2 * (Config.KMER_LENGTH - 1));
+        return kmer & mask;
+    }
+
     public static long shiftKMER(long kmer, byte nextByte) {
         return shiftKMER(kmer, (char) nextByte);
     }
-
-    public static long shiftKMER(long kmer, byte[] sequence, int index) {
-        return shiftKMER(kmer, (char) sequence[index]);
-    }
-
-    public static long shiftKMER(long kmer, String sequence, int index) {
-        return shiftKMER(kmer, sequence.charAt(index));
-    }
-
-    public static long shiftKMER(long kmer, byte[] sequence, int index, int length) {
-        for (int i = 0; i < length; i++) {
-            kmer = shiftKMER(kmer, sequence[index + i]);
-        }        
-        return kmer;
+    
+    public static long shiftKMER_revcomp(long kmer, byte nextByte) {
+        return shiftKMER_revcomp(kmer, (char) nextByte);
     }
 
     public static String decodeKmer(long encoded) {

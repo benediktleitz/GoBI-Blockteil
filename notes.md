@@ -180,3 +180,13 @@ Output Ordner Berechtigungen
 Gridsearch über k=10 bis k=15 mit or und rna
 
 not filtered: reads nonsensical (see filter method in compare filter to mapping)
+
+
+## IMPORTANT (REALLY!)
+
+read directions, what is fw, where do i have to use reverse complement?
+
+
+
+## Sam Frage:
+Wie sollen wir die Ergebnisse mergen für die beiden Orientations? Maximum oder union?

@@ -84,6 +84,14 @@ public class ReadEinleseroutine {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            executor.shutdown();
+            try {
+                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                executor.shutdownNow();
+            }
+
             if (writers != null) {
                 for (BufferedWriter writer : writers) {
                     if (writer == null) continue;
@@ -93,12 +101,6 @@ public class ReadEinleseroutine {
                         e.printStackTrace();
                     }
                 }
-            }
-            executor.shutdown();
-            try {
-                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }        
     }

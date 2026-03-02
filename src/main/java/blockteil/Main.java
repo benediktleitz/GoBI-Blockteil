@@ -73,7 +73,7 @@ public class Main {
         if (Config.WRITE_COUNT) {
             Writer.writeGeneCounts(countPath);
         }
-        
+        System.out.println("Done! Total processing time: " + Config.TIMING.get() + " ms");
     }
 
     public int add(int a, int b) {

@@ -7,13 +7,13 @@ import java.util.BitSet;
 import java.util.Set;
 
 public class BigOffsetKMERFilterer extends KMERFilterer {
-    public BitSet filterKMER(String seq) {
+    public BitSet filterKMER(String seq, boolean revcomp) {
         int[] geneToMatchedPositions = new int[Config.GENE_ARRAY.length];
         long kmer = 0;
 
         // Iterate over all k-mers and adding Main.KMER_LENGTH to the matched count for each gene
         A: for (int i = 0; i < seq.length() - Config.KMER_LENGTH + 1; i += Config.OFFSET) {
-            kmer = KMER.makeKMER(seq, i);
+            kmer = revcomp ? KMER.makeKMER_revcomp(seq, i) : KMER.makeKMER(seq, i);
 
             Set<Integer> matchingGenes = Config.KMER_MAP.get(kmer);
             if (matchingGenes == null) continue;
