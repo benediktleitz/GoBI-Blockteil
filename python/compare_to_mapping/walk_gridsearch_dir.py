@@ -52,6 +52,8 @@ def _run_single_comparison(matrix_dir, read_lists_dir, compare_script):
         read_lists_dir,
         "--od",
         matrix_dir,
+        "--bam",
+        os.path.join(matrix_dir, "not_filtered_reads.txt")
     ]
 
     try:
