@@ -175,3 +175,5 @@ Output Ordner Berechtigungen
 
 Schauen ob Fastq Output ordentlich
 Gridsearch über k=10 bis k=15 mit or und rna
+
+not filtered: reads nonsensical (see filter method in compare filter to mapping)
