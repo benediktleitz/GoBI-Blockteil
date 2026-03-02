@@ -112,4 +112,12 @@ public class ReadEinleseroutine {
         }
         return chunk;
     }
+
+    public static boolean sameRead(String fastqHeader, String readName) {
+        if (fastqHeader.startsWith("@")) {
+            fastqHeader = fastqHeader.substring(1);
+        }
+        fastqHeader = fastqHeader.split(" ")[0];
+        return fastqHeader.equals(readName);
+    }
 }

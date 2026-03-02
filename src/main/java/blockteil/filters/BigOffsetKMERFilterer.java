@@ -35,3 +35,11 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
         return out;
     }
 }
+
+
+/*
+for (int i = seq.length() - Config.KMER_LENGTH; i >= 0; i -= Config.OFFSET ){
+            long kmer = KMER.makeKMER_revcomp(seq, i);
+            System.out.println(KMER.decodeKmer(kmer));
+        }
+* */
