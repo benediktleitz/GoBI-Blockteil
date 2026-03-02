@@ -9,8 +9,8 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch4/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-testFiles/gridsearch4_dna}"
+GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch1/gene_list.txt}"
+OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch2}"
 MAX_PARALLEL="${MAX_PARALLEL:-8}"
 
 if [[ ! -f "$JAR" ]]; then
@@ -31,7 +31,7 @@ mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a K_VALUES=()
-for k in $(seq 12 4 30); do
+for k in $(seq 12 3 30); do
   K_VALUES+=("$k")
 done
 
@@ -43,8 +43,8 @@ join_by() {
 
 total_runs=0
 for k in "${K_VALUES[@]}"; do
-  for threshold in $(seq $((3 * k)) "$k" 150); do
-    total_runs=$((total_runs + 1))
+  for threshold in $(seq $((1 * k)) "$k" 100); do
+    total_runs=$((total_runs + 2))
   done
 done
 run_idx=0
@@ -178,26 +178,27 @@ copy_equivalent_outputs() {
 
 echo "Starting grid search"
 echo "K: $(join_by , "${K_VALUES[@]}")"
-echo "Offset: k (for each k)"
+echo "Offset: 1 and k (for each k)"
 echo "Threshold: n*k for n>=3 and threshold<=150"
 echo "Parallel Java runs: up to $MAX_PARALLEL"
 echo "Total runs: $total_runs"
 echo "Time summary: $TIME_SUMMARY"
 
 for k in "${K_VALUES[@]}"; do
-  offset="$k"
   pids=()
 
-  for threshold in $(seq $((3 * k)) "$k" 150); do
-    run_idx=$((run_idx + 1))
-    out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}"
-    mkdir -p "$out_dir"
+  for threshold in $(seq $((1 * k)) "$k" 100); do
+    for offset in 1 "$k"; do
+      run_idx=$((run_idx + 1))
+      out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}"
+      mkdir -p "$out_dir"
 
-    echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
-    throttle_jobs pids
-    run_one "$k" "$offset" "$threshold" "$out_dir" &
-    pids+=("$!")
-    executed_runs=$((executed_runs + 1))
+      echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
+      throttle_jobs pids
+      run_one "$k" "$offset" "$threshold" "$out_dir" &
+      pids+=("$!")
+      executed_runs=$((executed_runs + 1))
+    done
   done
 
   wait_for_jobs pids
