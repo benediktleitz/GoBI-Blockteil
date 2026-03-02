@@ -10,7 +10,7 @@ RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
 GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch1/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch2}"
+OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch1}"
 MAX_PARALLEL="${MAX_PARALLEL:-8}"
 
 if [[ ! -f "$JAR" ]]; then
@@ -31,9 +31,12 @@ mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a K_VALUES=()
-for k in $(seq 12 3 30); do
+for k in $(seq 10 1 15); do
   K_VALUES+=("$k")
 done
+
+declare -a THRESHOLD_VALUES=(60 75 90 105)
+declare -a PAIR_MODES=(and or)
 
 join_by() {
   local IFS="$1"
@@ -43,15 +46,17 @@ join_by() {
 
 total_runs=0
 for k in "${K_VALUES[@]}"; do
-  for threshold in $(seq $((1 * k)) "$k" 100); do
-    total_runs=$((total_runs + 2))
+  for threshold in "${THRESHOLD_VALUES[@]}"; do
+    for _pair_mode in "${PAIR_MODES[@]}"; do
+      total_runs=$((total_runs + 1))
+    done
   done
 done
 run_idx=0
 executed_runs=0
 copied_runs=0
 
-echo -e "k\toffset\tthreshold\tmode\tsource_threshold\telapsed\tuser_sec\tsystem_sec\tmax_rss_kb\ttime_file" > "$TIME_SUMMARY"
+echo -e "k\toffset\tthreshold\tpair_mode\tmode\tsource_threshold\telapsed\tuser_sec\tsystem_sec\tmax_rss_kb\ttime_file" > "$TIME_SUMMARY"
 
 extract_time_metric() {
   local key="$1"
@@ -63,28 +68,34 @@ run_one() {
   local k="$1"
   local offset="$2"
   local threshold="$3"
-  local out_dir="$4"
+  local pair_mode="$4"
+  local out_dir="$5"
 
   local time_file="$out_dir/time_verbose.txt"
   local run_log="$out_dir/run.log"
   local per_run_summary="$out_dir/time_summary.txt"
   local row_file="$out_dir/time_row.tsv"
 
-  /usr/bin/time -v -o "$time_file" \
-    java -jar "$JAR" \
-      -fw "$FW" \
-      -rw "$RW" \
-      -k "$k" \
-      -offset "$offset" \
-      -threshold "$threshold" \
-      -fasta "$FASTA" \
-      -od "$out_dir" \
-      -gtf "$GTF" \
-      -genes "$GENES" \
-      -tsv \
-      -counts \
-      -or \
-      > "$run_log" 2>&1
+  local -a cmd=(
+    java -jar "$JAR"
+    -fw "$FW"
+    -rw "$RW"
+    -k "$k"
+    -offset "$offset"
+    -threshold "$threshold"
+    -fasta "$FASTA"
+    -od "$out_dir"
+    -gtf "$GTF"
+    -genes "$GENES"
+    -tsv
+    -counts
+  )
+
+  if [[ "$pair_mode" == "or" ]]; then
+    cmd+=( -or )
+  fi
+
+  /usr/bin/time -v -o "$time_file" "${cmd[@]}" > "$run_log" 2>&1
 
   local elapsed
   local user_sec
@@ -95,12 +106,13 @@ run_one() {
   system_sec="$(extract_time_metric "System time (seconds)" "$time_file")"
   max_rss="$(extract_time_metric "Maximum resident set size (kbytes)" "$time_file")"
 
-  echo -e "${k}\t${offset}\t${threshold}\texecuted\t-\t${elapsed:-NA}\t${user_sec:-NA}\t${system_sec:-NA}\t${max_rss:-NA}\t${time_file}" > "$row_file"
+  echo -e "${k}\t${offset}\t${threshold}\t${pair_mode}\texecuted\t-\t${elapsed:-NA}\t${user_sec:-NA}\t${system_sec:-NA}\t${max_rss:-NA}\t${time_file}" > "$row_file"
 
   {
     echo "k=${k}"
     echo "offset=${offset}"
     echo "threshold=${threshold}"
+    echo "pair_mode=${pair_mode}"
     echo "mode=executed"
     echo "source_threshold=-"
     echo "elapsed=${elapsed:-NA}"
@@ -159,7 +171,7 @@ wait_for_jobs() {
 
 write_global_summary() {
   {
-    echo -e "k\toffset\tthreshold\tmode\tsource_threshold\telapsed\tuser_sec\tsystem_sec\tmax_rss_kb\ttime_file"
+    echo -e "k\toffset\tthreshold\tpair_mode\tmode\tsource_threshold\telapsed\tuser_sec\tsystem_sec\tmax_rss_kb\ttime_file"
     find "$OUT_BASE" -type f -name "time_row.tsv" | sort | while IFS= read -r row; do
       cat "$row"
     done
@@ -178,24 +190,26 @@ copy_equivalent_outputs() {
 
 echo "Starting grid search"
 echo "K: $(join_by , "${K_VALUES[@]}")"
-echo "Offset: 1 and k (for each k)"
-echo "Threshold: n*k for n>=3 and threshold<=150"
+echo "Offset: k"
+echo "Threshold: $(join_by , "${THRESHOLD_VALUES[@]}")"
+echo "Pair mode: $(join_by , "${PAIR_MODES[@]}")"
 echo "Parallel Java runs: up to $MAX_PARALLEL"
 echo "Total runs: $total_runs"
 echo "Time summary: $TIME_SUMMARY"
 
 for k in "${K_VALUES[@]}"; do
   pids=()
+  offset="$k"
 
-  for threshold in $(seq $((1 * k)) "$k" 100); do
-    for offset in 1 "$k"; do
+  for threshold in "${THRESHOLD_VALUES[@]}"; do
+    for pair_mode in "${PAIR_MODES[@]}"; do
       run_idx=$((run_idx + 1))
-      out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}"
+      out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}/mode_${pair_mode}"
       mkdir -p "$out_dir"
 
-      echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold"
+      echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold pair_mode=$pair_mode"
       throttle_jobs pids
-      run_one "$k" "$offset" "$threshold" "$out_dir" &
+      run_one "$k" "$offset" "$threshold" "$pair_mode" "$out_dir" &
       pids+=("$!")
       executed_runs=$((executed_runs + 1))
     done
@@ -209,3 +223,5 @@ write_global_summary
 echo "Grid search finished. Results are in: $OUT_BASE"
 echo "Executed runs: $executed_runs"
 echo "Copied runs:   $copied_runs"
+
+python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir output/filter_quality_analysis/H5/gridsearch1/ --threads 1

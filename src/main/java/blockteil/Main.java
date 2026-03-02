@@ -26,7 +26,6 @@ public class Main {
         String endStr = cmd.getOptionValue("end");
         String genes = cmd.getOptionValue("genes");
         String gtf = cmd.getOptionValue("gtf");
-
         if (chr != null && startStr != null && endStr != null) {
             int start = 0, end = 0;
             try {
