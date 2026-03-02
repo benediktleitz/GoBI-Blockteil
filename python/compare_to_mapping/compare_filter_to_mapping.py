@@ -29,6 +29,9 @@ def compare_filter_to_mapping(gene, filter_sets, read_lists_dir):
     matched = len(filter_reads & mapping_reads)
     not_mapped = len(filter_reads - mapping_reads)
     not_filtered = len(mapping_reads - filter_reads)
+    if not_filtered > 0:
+        not_filtered_sample = list(mapping_reads - filter_reads)
+        print(f"Gene: {gene}, Not Filtered: {not_filtered_sample}")
 
     return (gene, len(filter_reads), len(mapping_reads),
             matched, not_mapped, not_filtered)

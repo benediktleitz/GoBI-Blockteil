@@ -13,9 +13,10 @@ public abstract class KMERFilterer {
         } else {
             fwResult.and(rwResult);
         }
-
-        for (int gene = fwResult.nextSetBit(0); gene >= 0; gene = fwResult.nextSetBit(gene + 1)) {
-            Config.COUNT_ARRAY.incrementAndGet(gene);
+        if (Config.WRITE_COUNT) {
+            for (int gene = fwResult.nextSetBit(0); gene >= 0; gene = fwResult.nextSetBit(gene + 1)) {
+                Config.COUNT_ARRAY.incrementAndGet(gene);
+            }
         }
 
         return fwResult;

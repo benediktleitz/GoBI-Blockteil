@@ -160,16 +160,30 @@ bessere engine zum einlesen
 
 ### Sam Gespräch
 
-Wie sollen wir N handeln -> Wird es langsamer machen, wegen 2 if statements pro k-mer
+Wie sollen wir N handeln -> Wird es langsamer machen, wegen 2 if statements pro k-mer 
+- Wir können es so lassen, hat zwar kleinen bias, aber Geschwindigkeit ist wichtiger
+  
 13.5M reads/1 min mit -rna, -or, k=12, o=12, t=24/36, 5 Gene
 -> Hohes match zu mapping Ergebnis und min 80% rausgefiltert
 Wie mit non-protein coding Genen umgehen? (Wenn wir ne Gen liste bekommen protein-coding ignorieren?)
+- Alle Gene der Liste nehmen regardless
 SNP Liste als optionalen Input -> Welches Format? Vor allem bei mehreren Genen muss man wissen, welcher SNP Kmer für welches Gen da ist
+- kommt noch die nächste Tage
 
 Output Ordner Berechtigungen
 
 
 ### ToDos:
 
-Schauen ob Fastq Output ordentlich
 Gridsearch über k=10 bis k=15 mit or und rna
+
+Not filtered sollte 0 sein: Anschauen, was da passiert
+Zu hoch non filtered bei -rna
+
+lncoding sollte auch gemacht werden, alle Transkripte anschauen
+sRNA Gene maybe nicht
+Also nach Länge filtern für Gene 
+-> Ich würde sagen, wenn Gen Liste gegeben = Alle der Gen Liste benutzen und maybe gezielt aus der gtf holen
+
+Nur für RNA reads den Transkript Modus, nur für DNA reads den DNA modus
+IL10
