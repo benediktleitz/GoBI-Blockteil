@@ -179,13 +179,4 @@ Output Ordner Berechtigungen
 
 Gridsearch über k=10 bis k=15 mit or und rna
 
-Not filtered sollte 0 sein: Anschauen, was da passiert
-Zu hoch non filtered bei -rna
-
-lncoding sollte auch gemacht werden, alle Transkripte anschauen
-sRNA Gene maybe nicht
-Also nach Länge filtern für Gene 
--> Ich würde sagen, wenn Gen Liste gegeben = Alle der Gen Liste benutzen und maybe gezielt aus der gtf holen
-
-Nur für RNA reads den Transkript Modus, nur für DNA reads den DNA modus
-IL10
+not filtered: reads nonsensical (see filter method in compare filter to mapping)
