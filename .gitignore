@@ -13,3 +13,5 @@ python/venv/
 gene_list.txt
 python/test.py
 tmp/
+python/compare_to_mapping/__pycache__/
+*.pyc
