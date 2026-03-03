@@ -15,10 +15,10 @@ public class GeneralKMERFilterer extends KMERFilterer {
             if (Config.OFFSET == 1 && i > 0) kmer = revcomp ? KMER.shiftKMER_revcomp(kmer, seq.charAt(i + Config.KMER_LENGTH - 1)) : KMER.shiftKMER(kmer, seq.charAt(i + Config.KMER_LENGTH - 1));
             else kmer = revcomp ? KMER.makeKMER_revcomp(seq, i) : KMER.makeKMER(seq, i);
 
-            Set<Integer> matchingGenes = Config.KMER_MAP.get(kmer);
+            Set<Short> matchingGenes = Config.KMER_MAP.get(kmer);
             if (matchingGenes == null) continue;
 
-            for (Integer gene : matchingGenes) {
+            for (short gene : matchingGenes) {
                 BitSet matched = geneToMatchedPositions[gene];
                 if (matched == null) {
                     matched = new BitSet();

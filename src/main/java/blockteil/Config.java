@@ -4,14 +4,14 @@ import blockteil.filters.*;
 
 import blockteil.reference.*;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Config {
     public static int OFFSET;
-    public static final Long2ObjectOpenHashMap<IntOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
+    public static final Long2ObjectOpenHashMap<ShortOpenHashSet> KMER_MAP = new Long2ObjectOpenHashMap<>();
     public static String[] GENE_ARRAY;
     public static AtomicIntegerArray COUNT_ARRAY;
     public static int THRESHOLD;

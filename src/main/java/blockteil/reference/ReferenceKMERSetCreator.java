@@ -20,6 +20,7 @@ import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.reference.ReferenceSequenceFile;
 import htsjdk.samtools.reference.ReferenceSequenceFileFactory;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
 public abstract class ReferenceKMERSetCreator {
 
@@ -35,15 +36,15 @@ public abstract class ReferenceKMERSetCreator {
     }
 
     // add kmers starting with new kmer creation
-    protected long addKMERS(byte[] referenceBases, int idx, int regionStart, int regionEnd){
+    protected long addKMERS(byte[] referenceBases, short idx, int regionStart, int regionEnd){
         long kmer = KMER.makeKMER(referenceBases, regionStart);
         Config.KMER_MAP
-                .computeIfAbsent(kmer, k -> new IntOpenHashSet())
+                .computeIfAbsent(kmer, k -> new ShortOpenHashSet())
                 .add(idx);
         for (int i = Config.KMER_LENGTH + regionStart; i < regionEnd; i++) {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
             Config.KMER_MAP
-                    .computeIfAbsent(kmer, k -> new IntOpenHashSet())
+                    .computeIfAbsent(kmer, k -> new ShortOpenHashSet())
                     .add(idx);
             if (Config.KMER_MAP.size() % 10000000 == 0) {
                 System.out.println(Config.KMER_MAP.size() + " unique k-mers in map so far, at gene " + idx + "/" + Config.GENE_ARRAY.length);
@@ -55,14 +56,14 @@ public abstract class ReferenceKMERSetCreator {
     }
 
     // add kmers with no kmer creation only shifting
-    protected long addKMERS(byte[] referenceBases, int idx, int regionStart, int regionEnd, long kmer){
+    protected long addKMERS(byte[] referenceBases, short idx, int regionStart, int regionEnd, long kmer){
         Config.KMER_MAP
-                .computeIfAbsent(kmer, k -> new IntOpenHashSet())
+                .computeIfAbsent(kmer, k -> new ShortOpenHashSet())
                 .add(idx);
         for (int i = regionStart; i < regionEnd; i++) {
             kmer = KMER.shiftKMER(kmer, referenceBases[i]);
             Config.KMER_MAP
-                    .computeIfAbsent(kmer, k -> new IntOpenHashSet())
+                    .computeIfAbsent(kmer, k -> new ShortOpenHashSet())
                     .add(idx);
             if (Config.KMER_MAP.size() % 10000000 == 0) {
                 System.out.println(Config.KMER_MAP.size() + " unique k-mers in map so far, at gene " + idx + "/" + Config.GENE_ARRAY.length);
