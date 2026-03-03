@@ -7,7 +7,7 @@ import java.util.BitSet;
 public class FastqRecord {
     public String fw_header, rw_header, fw, rw, plus, fw_quality, rw_quality;
 
-    public BitSet matchedGenes; // To store which genes this read matches
+    public BitSet matchedGenes;
 
     public FastqRecord(String fw_header, String rw_header, String fw, String rw, String fw_quality, String rw_quality) {
         this.fw_header = fw_header; this.rw_header = rw_header; this.fw = fw; this.rw = rw; this.fw_quality = fw_quality; this.rw_quality = rw_quality;
@@ -22,6 +22,8 @@ public class FastqRecord {
             return "";
         }
         StringBuilder sb = new StringBuilder();
+        fw_header = fw_header.startsWith("@") ? fw_header.substring(1) : fw_header;
+        fw_header = fw_header.split(" ")[0];
         sb.append(fw_header);
         for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
             sb.append("\t")
