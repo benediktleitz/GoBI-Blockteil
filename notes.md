@@ -185,3 +185,22 @@ Gen liste -> Alle behandeln und ned nur protein_coding
 read directions, what is fw, where do i have to use reverse complement?
 
 
+## 03.03.
+
+### Was können wir noch tun?
+- Repeat Regionen/ Paraloge Gene anders behandeln
+- Mehrere k gleichzeitig testen
+- Statt tsv effizienteren output (z.B. in Binary (und dann len von read id und danach das bitset für die Gene), oder simpler (was wahrscheinlich kürzer zum lesen braucht): read_id\tgene_id für jede Spalte und einfach jeden hit in einer Zeile)
+- N in Sequenzen anders behandeln
+- check chunk size for efficient parallelization
+- Quality scores betrachten
+
+### Wie können wir was auswerten?
+- Runtime plotten: Über k, über offset, über threshold, chunksize (also immer eins variabel und die anderen fix, maybe für jedes and und or)
+- Memory plotten: Über unterschiedliche Anzahl von Genen mit fixem k, offset und threshold, maybe and und or unterscheiden -> Maybe Gen länge irgendwie zum Normalisieren auch benutzen oder beachten
+-> Memory und runtime am besten für unterschiedliche fastqs und dann nach read count normalisieren
+- Filtered, not_filtered (maybe mit zwei linien und zwei Achsen (eine Links und eine rechts)) über k, offset und threshold (eins variabel, die anderen fix?, auch für jedes and und or)
+
+-> Für alles auch zwischen RNA und DNA Modus unterscheiden
+
+short statt int array
