@@ -10,25 +10,9 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class RNAReferenceCreator extends ReferenceKMERSetCreator{
-    private List<Gene> consideredGenes;
 
     public RNAReferenceCreator(String fastaPath) {
         super(fastaPath);
-    }
-
-    public void addAllTranscriptKMERS(Gene gene){
-        byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
-        List<Pair> exons;
-        Pair exon;
-        for(RegionVector rv : gene.id2RegionVector.values()){
-            exons = rv.get_sorted_pair_regions();
-            exon = exons.getFirst();
-            long kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1);
-            for(int i = 1; i < exons.size(); i++){
-                exon = exons.get(i);
-                kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);
-            }
-        }
     }
 
     public void addKMERS(Gene gene){
@@ -38,10 +22,21 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
     }
 
     public void addKMERS(Map<String, Gene> id2Gene) {
-        Config.setGeneArray(getIdArray(id2Gene)); // either only gene list genes or all protein coding genes in id2gene
-        Collection<Gene> consideredGenes = this.consideredGenes == null ? id2Gene.values() : this.consideredGenes;
-        for(Gene gene : consideredGenes){
-            addAllTranscriptKMERS(gene);
+        Config.setGeneArray(getIdArray(id2Gene)); // only relevant genes in id2gene
+        byte[] referenceBases;
+        List<Pair> exons;
+        Pair exon;
+        for(Gene gene : id2Gene.values()){
+            referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
+            for(RegionVector rv : gene.id2RegionVector.values()){
+                exons = rv.get_sorted_pair_regions();
+                exon = exons.getFirst();
+                long kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1);
+                for(int i = 1; i < exons.size(); i++){
+                    exon = exons.get(i);
+                    kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);
+                }
+            }
         }
     }
 
@@ -50,11 +45,6 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
         for(Gene g : id2gene.values()){
             transcripts.addAll(g.id2RegionVector.values());
         }
-        this.consideredGenes = null;
-        return assignedIndices(transcripts);
-    }
-
-    public String[] assignedIndices(List<RegionVector> transcripts){
         transcripts.sort(Comparator.comparing(x -> x.transcript_id));
         String[] strings = new String[transcripts.size()];
         RegionVector rv;
