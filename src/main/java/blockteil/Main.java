@@ -7,6 +7,7 @@ import blockteil.readprocessing.Writer;
 
 import java.nio.file.Path;
 import java.lang.OutOfMemoryError;
+import java.util.Set;
 
 
 public class Main {
@@ -38,14 +39,16 @@ public class Main {
             Gene g = new Gene(null, chr, start, end);
             creator.addKMERS(g);
         } else if (genes != null && gtf != null) {
+            // get set of gene strings
             Einleseroutine reader = Config.EINLESEROUTINE;
-            reader.read();
-            creator.addKMERS(genes, reader.id2gene);
+            Set<String> genesToAdd = creator.readGeneList(genes);
+            reader.read(genesToAdd);
+            creator.addKMERS(reader.id2gene);
         } else if (gtf != null){
             try {
                 Einleseroutine reader = Config.EINLESEROUTINE;
-                reader.read();
-                creator.addKMERS(null, reader.id2gene); // no genes list -> all genes in GTF file
+                reader.read(null);
+                creator.addKMERS(reader.id2gene); // no genes list -> all genes in GTF file
             } catch (OutOfMemoryError e) {
                 System.err.println("Error in adding k-mers: " + e.getMessage());
                 System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
@@ -57,6 +60,7 @@ public class Main {
         }
         System.out.println("Finished creating k-mer map, starting to filter reads...");
         System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
+
         
         String fw = cmd.getOptionValue("fw");
         String rw = cmd.getOptionValue("rw");

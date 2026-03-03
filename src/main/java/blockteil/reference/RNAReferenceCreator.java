@@ -37,36 +37,12 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
         System.exit(1);
     }
 
-    public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
-        if (geneFilePath == null) {
-            Config.setGeneArray(getIdArray(id2Gene)); // no genes list -> all transcripts in GTF file
-        } else {
-            Config.setGeneArray(getIdArray(geneFilePath, id2Gene));
-        }
+    public void addKMERS(Map<String, Gene> id2Gene) {
+        Config.setGeneArray(getIdArray(id2Gene)); // either only gene list genes or all protein coding genes in id2gene
         Collection<Gene> consideredGenes = this.consideredGenes == null ? id2Gene.values() : this.consideredGenes;
         for(Gene gene : consideredGenes){
             addAllTranscriptKMERS(gene);
         }
-    }
-
-    public String[] getIdArray(String filePath, Map<String, Gene> id2gene) {
-        List<Gene> consideredGenes = new ArrayList<>();
-        List<RegionVector> transcripts = new ArrayList<>();
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-                Gene g = id2gene.get(line);
-                if (g == null) continue;
-                transcripts.addAll(g.id2RegionVector.values());
-                consideredGenes.add(g);
-            }
-            this.consideredGenes = consideredGenes;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return assignedIndices(transcripts);
     }
 
     private String[] getIdArray(Map<String, Gene> id2gene) {

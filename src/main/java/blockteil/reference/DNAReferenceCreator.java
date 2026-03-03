@@ -21,12 +21,8 @@ public class DNAReferenceCreator extends ReferenceKMERSetCreator {
         addKMERS(referenceBases, 0, 0, referenceBases.length);
     }
 
-    public void addKMERS(String geneFilePath, Map<String, Gene> id2Gene) {
-        if (geneFilePath == null) {
-            Config.setGeneArray(getIdArray(id2Gene.keySet())); // no genes list -> all genes in GTF file
-        } else {
-            Config.setGeneArray(getIdArray(geneFilePath));
-        }
+    public void addKMERS(Map<String, Gene> id2Gene) {
+        Config.setGeneArray(getIdArray(id2Gene.keySet())); // either only gene list genes or all protein coding genes in id2gene
         Gene gene;
         for(int i = 0; i < Config.GENE_ARRAY.length; i++){
             gene = id2Gene.get(Config.GENE_ARRAY[i]);
@@ -34,21 +30,6 @@ public class DNAReferenceCreator extends ReferenceKMERSetCreator {
             byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
             addKMERS(referenceBases, i, 0, referenceBases.length);
         }
-    }
-
-    public String[] getIdArray(String filePath) {
-        try (Stream<String> lines = Files.lines(Paths.get(filePath))) {
-            return lines
-                    .map(String::trim)
-                    .filter(line -> !line.isEmpty())
-                    .sorted()
-                    .toArray(String[]::new);
-        }
-        catch (Exception e){
-            System.err.println("Error reading gene id file");
-            e.printStackTrace();
-        }
-        return null;
     }
 
     public String[] getIdArray(Set<String> idSet) {

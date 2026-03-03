@@ -3,9 +3,17 @@ package blockteil.reference;
 import blockteil.Config;
 import blockteil.KMER;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.lang.Runtime;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 import htsjdk.samtools.reference.ReferenceSequence;
@@ -26,6 +34,7 @@ public abstract class ReferenceKMERSetCreator {
         return referenceSequence.getBases();
     }
 
+    // add kmers starting with new kmer creation
     protected long addKMERS(byte[] referenceBases, int idx, int regionStart, int regionEnd){
         long kmer = KMER.makeKMER(referenceBases, regionStart);
         Config.KMER_MAP
@@ -45,6 +54,7 @@ public abstract class ReferenceKMERSetCreator {
         return kmer;
     }
 
+    // add kmers with no kmer creation only shifting
     protected long addKMERS(byte[] referenceBases, int idx, int regionStart, int regionEnd, long kmer){
         Config.KMER_MAP
                 .computeIfAbsent(kmer, k -> new IntOpenHashSet())
@@ -65,7 +75,22 @@ public abstract class ReferenceKMERSetCreator {
 
     public abstract void addKMERS(Gene g);
 
-    public abstract void addKMERS(String geneFilePath, Map<String, Gene> id2Gene);
+    public abstract void addKMERS(Map<String, Gene> id2Gene);
+
+    public Set<String> readGeneList(String geneFilePath){
+        Set<String> genesToAdd = new HashSet<>();
+        try (BufferedReader br = Files.newBufferedReader(Paths.get(geneFilePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                genesToAdd.add(line);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return genesToAdd;
+    }
 
 
 
