@@ -1,0 +1,288 @@
+---
+title: "PlotsServer"
+output: html_document
+date: "2026-03-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+library(tidyverse)
+library(scales)
+```
+
+```{r}
+numReads = 27000000
+gridsearchDir = "../output/plotting_data/quality/dna/"
+allGenesDir = "../output/all_gene_analysis/"
+plotsDir = paste0(gridsearchDir, "plots/")
+extType = ".jpg"
+long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) %>% 
+  filter(gene != "ENSSSCG00000044511" & mapping_reads != 0) 
+long_summary = long_summary %>% mutate(not_recall = matched/mapping_reads, not_precision = matched/filtered_reads, percentReads = filtered_reads/numReads)
+
+long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_reads))
+```
+
+
+```{r}
+plotMetric <- function(modeString, metric, func, 
+                       save = F, 
+                       df = long_summary, 
+                       scaleFunc = scales::label_number(accuracy = 0.0001)){
+  metricString <- deparse(substitute(metric))
+  funcString <- deparse(substitute(func))
+  p = df %>% 
+  filter(mode == modeString) %>% 
+  group_by(k, threshold) %>% 
+  mutate(summarisedMetric = func({{ metric }})) %>%
+  ggplot(aes(x = factor(k),
+             y = factor(threshold),
+             fill = summarisedMetric)) +
+  geom_tile() +
+  geom_text(
+  aes(label = scaleFunc(summarisedMetric)),
+  size = 2)  +
+    scale_fill_gradient(
+    low = "#25ced1",
+    high = "#ea526f",
+    name =  metricString
+  ) +
+  coord_fixed() +
+    labs(title = paste(modeString, metricString, funcString)) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank()
+  )
+  if(save){
+    filename = paste(sep = "_", metricString, modeString, funcString)
+    pathname = paste0(plotsDir, "HeatMaps/", filename, extType)
+    ggsave(pathname, p)
+  }
+  return(p)
+}
+
+
+```
+
+
+```{r}
+plotMetric("or", not_recall, min)
+plotMetric("or", not_precision, min)
+
+plotMetric("and", not_recall, min)
+
+plotMetric("or", filtered_reads, max, F, 
+                 df = long_summary %>% filter( k  > 10), 
+                 scaleFunc = scales::label_number())
+
+
+
+
+```
+
+
+```{r}
+
+plot_readCountByThreshold <- function(k_val, modeString) {
+  offset_amount = 0.1
+  plot_data <- long_summary %>% 
+    filter(k == k_val)
+  if(modeString != "both") {
+    plot_data = plot_data %>% filter(mode == modeString)
+  }
+  
+  # Calculate scale factor for secondary axis (using overall max values)
+  max_filtered <- max(plot_data$filtered_reads, na.rm = TRUE)
+  max_not_filtered <- max(plot_data$not_filtered, na.rm = TRUE)
+  scale_factor <- max_filtered / max_not_filtered
+  
+  # Convert threshold to numeric and add offset for different point types
+  plot_data <- plot_data %>%
+    mutate(
+      threshold_numeric = as.numeric(factor(threshold)),
+      filtered_x = threshold_numeric - offset_amount/2,
+      not_filtered_x = threshold_numeric + offset_amount/2
+    )
+  
+  # Create the plot with threshold as factor but using numeric positions
+  p <- ggplot() +
+    geom_point(data = plot_data,
+               aes(x = filtered_x, 
+                   y = filtered_reads, 
+                   color = "Filtered Reads", 
+                   group = gene),
+               size = 1.5, alpha = 0.7) +
+    geom_point(data = plot_data,
+               aes(x = not_filtered_x, 
+                   y = not_filtered * scale_factor, 
+                   color = "Not Filtered Reads", 
+                   group = gene),
+               size = 1.5, alpha = 0.7) +
+    scale_y_continuous(
+      name = "Filtered Reads",
+      sec.axis = sec_axis(~ . / scale_factor, name = "Not Filtered Reads"),
+      labels = scales::label_number(scale_cut = scales::cut_short_scale())
+    ) +
+    scale_x_continuous(
+      breaks = unique(plot_data$threshold_numeric),
+      labels = unique(plot_data$threshold),
+      name = "Threshold"
+    ) +
+    labs(title = paste("Read Counts by Threshold ( k =", k_val, ", mode =",modeString,")"),
+         color = "Read Type") +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "bottom",
+      panel.grid.minor = element_blank()
+    ) +
+    scale_color_manual(values = c("Filtered Reads" = "#25ced1", 
+                                   "Not Filtered Reads" = "#ea526f")) 
+  
+  if(modeString == "both"){
+    p = p + facet_wrap(~mode)
+  }
+  
+  return(p)
+}
+
+saveReadCountsByThreshold <- function(modes = c("or", "and", "both")){
+  for(k in unique(long_summary$k)) {
+  for(mode in modes){
+    p = plot_readCountByThreshold(k, mode)
+    pathname=paste0(plotsDir, "ReadCountByThreshold/ReadCountByThreshold_K", k, "_", mode, extType)
+    ggsave(pathname, p)
+  }
+}
+}
+```
+
+```{r}
+tsv = read_tsv(paste0(gridsearchDir, "k_17/offset_17/threshold_90/mode_and/read2gene_matrix.tsv"))
+tsv %>% pivot_longer(cols = starts_with("E")) %>% group_by(name) %>% summarise(sum(value))
+
+tsv %>% mutate(rowsum = rowSums(.[2:9])) %>% summarise(avg = mean(rowsum))
+```
+
+
+```{r}
+#saveReadCountsByThreshold( c("both"))
+#saveReadCountsByThreshold()
+
+fullGenes = read_tsv(paste0(allGenesDir, "dna_gene_counts.tsv"))
+fullRNA = read_tsv(paste0(allGenesDir, "gene_counts.tsv"))
+parameterString="K=15, T=105"
+```
+
+```{r}
+
+plotCountDistribution <- function(df, colour, typeString){
+  p = df %>% 
+  ggplot(aes(x = count +1)) +
+  geom_histogram(bins = 100, fill = colour) +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))+
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(title = paste(typeString, "Count Distribution"),
+       subtitle = paste0("(", parameterString, ")")) +
+  theme_minimal()
+  return(p)
+}
+```
+
+```{r}
+plotCountDistribution(fullGenes, "deepskyblue4", "Gene")
+plotCountDistribution(fullRNA, "deepskyblue3", "Transcript")
+```
+
+```{r}
+readVerbose <- function(path){
+  tmp = read_delim(path, delim = ": ", 
+                    col_names = c("cmd", "value")) %>% 
+  mutate(cmd = str_replace_all(cmd, "([\n\t])", ""))
+  return(tmp)
+}
+
+parse_elapsed <- function(x) {
+  parts <- strsplit(x, ":")
+  sapply(parts, function(p) {
+    mins <- as.numeric(p[1])
+    secs <- as.numeric(p[2])
+    mins * 60 + secs
+  })
+}
+
+getMaxResSize <- function(verboseDF){
+  return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
+}
+
+timingGenes = readVerbose(paste0(allGenesDir, "dna_verbose.txt"))
+timingRNA = readVerbose(paste0(allGenesDir, "rna_verbose.txt"))
+
+
+timingSummary = read_tsv(paste0(gridsearchDir, "time_summary.tsv"),
+                         col_types = cols(elapsed = col_character())) %>% 
+  mutate(mode = pair_mode,
+         elapsed_sec = parse_elapsed(elapsed),
+         max_rss_b = max_rss_kb * 1024) %>% 
+  select(-pair_mode)
+
+
+
+
+timingSummary %>%
+  filter(pair_mode == "or") %>% 
+  group_by(k, threshold) %>% 
+  select(k, threshold, elapsed)
+
+plotMetric("or", elapsed_sec, identity, df = timingSummary)
+plotMetric("or", max_rss_b, identity, df = timingSummary, scaleFunc = scales::label_bytes(accuracy = 0.01))
+
+```
+
+```{r}
+plotRunTimeFixedValue <- function(value1, metric1, xMetric, df = timingSummary, metric2=NA, value2=NA){
+  xString = metricString <- deparse(substitute(xMetric))
+  filterString = paste(deparse(substitute(metric1)), "=", value1)
+  if(!is.na(value2)) 
+    filterString = paste(filterString, "and", deparse(substitute(metric2)), "=", value2)
+
+  
+  df = df %>% 
+    filter({{metric1}} == value1 &
+             (if(!is.na(value2)) {{metric2}} == value2 else T)) %>% 
+    mutate(linetype = mode, x = {{xMetric}}) %>%
+    select(linetype, elapsed_sec, x) 
+  
+  x_breaks <- unique(df$x)
+  
+  p = df %>% 
+    ggplot(aes(x = x, y = elapsed_sec, colour = linetype)) +
+    geom_line() +
+    scale_x_continuous(
+      breaks =  x_breaks,  
+      labels =  x_breaks
+    ) +
+    theme_minimal() +
+    labs(title = paste0("Program time for different ", xString, "s at: ", filterString),
+         x = xString)
+  
+  return(p)
+}
+
+plotRunTimeFixedValue(15, k, threshold, metric2 = offset, value2 = 15)
+plotRunTimeFixedValue(105, threshold, k)
+
+
+
+```
+
+
+```{r}
+
+```
+
+

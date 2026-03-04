@@ -31,10 +31,10 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
             for(RegionVector rv : gene.id2RegionVector.values()){
                 exons = rv.get_sorted_pair_regions();
                 exon = exons.getFirst();
-                long kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1);
+                long kmer = addKMERS(referenceBases, rv.shortIndex, exon.start - gene.start, exon.end - gene.start + 1);
                 for(int i = 1; i < exons.size(); i++){
                     exon = exons.get(i);
-                    kmer = addKMERS(referenceBases, rv.integerIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);
+                    kmer = addKMERS(referenceBases, rv.shortIndex, exon.start - gene.start, exon.end - gene.start + 1, kmer);
                 }
             }
         }
@@ -48,7 +48,7 @@ public class RNAReferenceCreator extends ReferenceKMERSetCreator{
         transcripts.sort(Comparator.comparing(x -> x.transcript_id));
         String[] strings = new String[transcripts.size()];
         RegionVector rv;
-        for(int i = 0; i < strings.length; i++){
+        for(short i = 0; i < strings.length; i++){
             rv = transcripts.get(i);
             strings[i] = rv.transcript_id;
             rv.setIntegerIndex(i);

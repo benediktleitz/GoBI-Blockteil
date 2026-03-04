@@ -18,13 +18,13 @@ public class DNAReferenceCreator extends ReferenceKMERSetCreator {
     public void addKMERS(Gene gene){
         Config.setGeneArray(new String[]{gene.gene_name}); // only one gene -> only one entry in geneRecord array
         byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);
-        addKMERS(referenceBases, 0, 0, referenceBases.length);
+        addKMERS(referenceBases, (short) 0, 0, referenceBases.length);
     }
 
     public void addKMERS(Map<String, Gene> id2Gene) {
         Config.setGeneArray(getIdArray(id2Gene.keySet())); // either only gene list genes or all protein coding genes in id2gene
         Gene gene;
-        for(int i = 0; i < Config.GENE_ARRAY.length; i++){
+        for(short i = 0; i < Config.GENE_ARRAY.length; i++){
             gene = id2Gene.get(Config.GENE_ARRAY[i]);
             if(gene == null) continue;
             byte[] referenceBases = getReferenceBases(gene.chromosome, gene.start, gene.end);

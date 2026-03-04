@@ -15,10 +15,10 @@ public class BigOffsetKMERFilterer extends KMERFilterer {
         A: for (int i = 0; i < seq.length() - Config.KMER_LENGTH + 1; i += Config.OFFSET) {
             kmer = revcomp ? KMER.makeKMER_revcomp(seq, i) : KMER.makeKMER(seq, i);
 
-            Set<Integer> matchingGenes = Config.KMER_MAP.get(kmer);
+            Set<Short> matchingGenes = Config.KMER_MAP.get(kmer);
             if (matchingGenes == null) continue;
 
-            for (Integer gene : matchingGenes) {
+            for (short gene : matchingGenes) {
                 geneToMatchedPositions[gene] += Config.KMER_LENGTH;
                 if (Config.EARLY_TERMINATION_ALLOWED && geneToMatchedPositions[gene] >= Config.THRESHOLD) break A;
             }

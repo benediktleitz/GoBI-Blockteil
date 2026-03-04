@@ -10,7 +10,7 @@ public class RegionVector {
     public List<Pair> pair_regions;
     public String transcript_id;
     private List<Pair> sorted_pairs;
-    public int integerIndex;
+    public short shortIndex;
 
     public RegionVector(String transcript_id) {
         this.pair_regions = new ArrayList<>();
@@ -54,7 +54,7 @@ public class RegionVector {
     }
 
 
-    public void setIntegerIndex(int index) {
-        integerIndex = index;
+    public void setIntegerIndex(short index) {
+        shortIndex = index;
     }
 }
