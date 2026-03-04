@@ -189,9 +189,7 @@ read directions, what is fw, where do i have to use reverse complement?
 
 ### Was können wir noch tun?
 - Repeat Regionen/ Paraloge Gene anders behandeln
-- Mehrere k gleichzeitig testen
 - Statt tsv effizienteren output (z.B. in Binary (und dann len von read id und danach das bitset für die Gene), oder simpler (was wahrscheinlich kürzer zum lesen braucht): read_id\tgene_id für jede Spalte und einfach jeden hit in einer Zeile)
-- N in Sequenzen anders behandeln
 - check chunk size for efficient parallelization
 - Quality scores betrachten
 
@@ -203,4 +201,3 @@ read directions, what is fw, where do i have to use reverse complement?
 
 -> Für alles auch zwischen RNA und DNA Modus unterscheiden
 
-short statt int array
