@@ -21,6 +21,9 @@ public class KMER {
     public static long makeKMER(byte[] sequence, int start) {
         long kmer = 0;
         for (int i = 0; i < Config.KMER_LENGTH; i++) {
+            // if (sequence[start + i] == 78) { // 'N'
+            //     return Long.MIN_VALUE;
+            // }
             kmer <<= 2;
             kmer |= BASE_TO_BITS[sequence[start + i]];
         }
@@ -34,6 +37,9 @@ public class KMER {
     public static long makeKMER_revcomp(byte[] sequence, int start) {
         long kmer = 0;
         for(int i = Config.KMER_LENGTH - 1; i >= 0; i--) {
+            // if (sequence[start + i] == 78) { // 'N'
+            //     return Long.MIN_VALUE;
+            // }
             kmer <<= 2;
             kmer |= BASE_TO_BITS_COMPLEMENT[sequence[start + i]];
         }
@@ -45,12 +51,18 @@ public class KMER {
     }
 
     public static long shiftKMER(long kmer, char nextChar) {
+        // if (nextChar == 'N') {
+        //     return Long.MIN_VALUE;
+        // }
         kmer <<= 2;
         kmer |= BASE_TO_BITS[nextChar];
         return kmer & mask;
     }
 
     public static long shiftKMER_revcomp(long kmer, char nextChar) {
+        // if (nextChar == 'N') {
+        //     return Long.MIN_VALUE;
+        // }
         kmer >>>= 2;
         kmer |= ((long) BASE_TO_BITS_COMPLEMENT[nextChar]) << (2 * (Config.KMER_LENGTH - 1));
         return kmer & mask;
