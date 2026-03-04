@@ -9,8 +9,8 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch1/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch1}"
+GENES="${GENES:-output/filter_quality_analysis/H5/gridsearch2/gene_list.txt}"
+OUT_BASE="${OUT_BASE:-output/filter_quality_analysis/H5/gridsearch2}"
 MAX_PARALLEL="${MAX_PARALLEL:-8}"
 
 if [[ ! -f "$JAR" ]]; then
@@ -31,11 +31,11 @@ mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a K_VALUES=()
-for k in $(seq 10 1 15); do
+for k in $(seq 15 1 20); do
   K_VALUES+=("$k")
 done
 
-declare -a THRESHOLD_VALUES=(60 75 90 105)
+declare -a THRESHOLD_VALUES=(90 105 120)
 declare -a PAIR_MODES=(and or)
 
 join_by() {
@@ -224,4 +224,4 @@ echo "Grid search finished. Results are in: $OUT_BASE"
 echo "Executed runs: $executed_runs"
 echo "Copied runs:   $copied_runs"
 
-python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir output/filter_quality_analysis/H5/gridsearch1/ --threads 1
+python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir output/filter_quality_analysis/H5/gridsearch2/ --threads 1
