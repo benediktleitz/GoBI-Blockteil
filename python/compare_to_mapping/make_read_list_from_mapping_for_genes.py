@@ -131,7 +131,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a read list from a mapping file for specific genes.")
     parser.add_argument("--mapping", required=True, help="Path to the mapping file (BAM).")
-    parser.add_argument("--gene_list", required=True, help="Path to the file containing the list of genes.")
+    parser.add_argument("--gene-list", required=True, help="Path to the file containing the list of genes.")
     parser.add_argument("--gtf", required=True, help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
     parser.add_argument("--rna", action="store_true", help="Indicates that the transcripts should be considered, not genes.")
