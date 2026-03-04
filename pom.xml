@@ -57,31 +57,22 @@
                 </configuration>
             </plugin>
 
-            <!-- Assembly plugin to create runnable JAR in same folder -->
+            <!-- Copy runtime dependencies next to the thin jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.6.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>blockteil.Main</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <appendAssemblyId>false</appendAssemblyId>
-                    <finalName>gta_filter</finalName>
-                    <outputDirectory>${project.basedir}</outputDirectory>
-                </configuration>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
+                        <id>copy-runtime-dependencies</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>copy-dependencies</goal>
                         </goals>
+                        <configuration>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>${project.basedir}/lib</outputDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -92,9 +83,13 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
+                    <outputDirectory>${project.basedir}</outputDirectory>
+                    <finalName>gta_filter</finalName>
                     <archive>
                         <manifest>
                             <mainClass>blockteil.Main</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
                         </manifest>
                     </archive>
                 </configuration>
