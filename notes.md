@@ -201,3 +201,9 @@ read directions, what is fw, where do i have to use reverse complement?
 
 -> Für alles auch zwischen RNA und DNA Modus unterscheiden
 
+
+Runtime Plot:
+Über K: Offset=k, Threshold=105, and und or, dna und rna -> 4 linien
+Über Threshold: K=15, offset=k, and und or, dna und rna 
+Über Offset: k=15, threshold=105
+-> Wie viele runs pro value?
