@@ -75,7 +75,7 @@ plotMetric("or", not_precision, min)
 
 plotMetric("and", not_recall, min)
 
-plotMetric("or", filtered_reads, max, F, 
+plotMetric("or", filtered_reads, max, T, 
                  df = long_summary %>% filter( k  > 10), 
                  scaleFunc = scales::label_number())
 
@@ -87,10 +87,10 @@ plotMetric("or", filtered_reads, max, F,
 
 ```{r}
 
-plot_readCountByThreshold <- function(k_val, modeString) {
+plot_readCountByThreshold <- function(t_val, modeString) {
   offset_amount = 0.1
   plot_data <- long_summary %>% 
-    filter(k == k_val)
+    filter(threshold == t_val)
   if(modeString != "both") {
     plot_data = plot_data %>% filter(mode == modeString)
   }
@@ -103,9 +103,9 @@ plot_readCountByThreshold <- function(k_val, modeString) {
   # Convert threshold to numeric and add offset for different point types
   plot_data <- plot_data %>%
     mutate(
-      threshold_numeric = as.numeric(factor(threshold)),
-      filtered_x = threshold_numeric - offset_amount/2,
-      not_filtered_x = threshold_numeric + offset_amount/2
+      k_numeric = as.numeric(factor(k)),
+      filtered_x = k_numeric - offset_amount/2,
+      not_filtered_x = k_numeric + offset_amount/2
     )
   
   # Create the plot with threshold as factor but using numeric positions
@@ -124,15 +124,17 @@ plot_readCountByThreshold <- function(k_val, modeString) {
                size = 1.5, alpha = 0.7) +
     scale_y_continuous(
       name = "Filtered Reads",
-      sec.axis = sec_axis(~ . / scale_factor, name = "Not Filtered Reads"),
+      sec.axis = sec_axis(~ . / scale_factor, 
+                          name = "Not Filtered Reads", 
+                          labels = scales::label_number(scale_cut = scales::cut_short_scale())),
       labels = scales::label_number(scale_cut = scales::cut_short_scale())
     ) +
     scale_x_continuous(
-      breaks = unique(plot_data$threshold_numeric),
-      labels = unique(plot_data$threshold),
-      name = "Threshold"
+      breaks = unique(plot_data$k_numeric),
+      labels = unique(plot_data$k),
+      name = "K"
     ) +
-    labs(title = paste("Read Counts by Threshold ( k =", k_val, ", mode =",modeString,")"),
+    labs(title = paste("Read Counts by k ( threshold =", t_val, ", mode =",modeString,")"),
          color = "Read Type") +
     theme_bw() +
     theme(
@@ -151,14 +153,16 @@ plot_readCountByThreshold <- function(k_val, modeString) {
 }
 
 saveReadCountsByThreshold <- function(modes = c("or", "and", "both")){
-  for(k in unique(long_summary$k)) {
+  for(t in unique(long_summary$threshold)) {
   for(mode in modes){
-    p = plot_readCountByThreshold(k, mode)
-    pathname=paste0(plotsDir, "ReadCountByThreshold/ReadCountByThreshold_K", k, "_", mode, extType)
+    p = plot_readCountByThreshold(t, mode)
+    pathname=paste0(plotsDir, "ReadCount/ByThreshold/ReadCountByThreshold_T", t, "_", mode, extType)
     ggsave(pathname, p)
   }
 }
 }
+
+plot_readCountByThreshold(105, "both")
 ```
 
 ```{r}
@@ -171,7 +175,7 @@ tsv %>% mutate(rowsum = rowSums(.[2:9])) %>% summarise(avg = mean(rowsum))
 
 ```{r}
 #saveReadCountsByThreshold( c("both"))
-#saveReadCountsByThreshold()
+saveReadCountsByThreshold()
 
 fullGenes = read_tsv(paste0(allGenesDir, "dna_gene_counts.tsv"))
 fullRNA = read_tsv(paste0(allGenesDir, "gene_counts.tsv"))
@@ -198,87 +202,6 @@ plotCountDistribution(fullGenes, "deepskyblue4", "Gene")
 plotCountDistribution(fullRNA, "deepskyblue3", "Transcript")
 ```
 
-```{r}
-readVerbose <- function(path){
-  tmp = read_delim(path, delim = ": ", 
-                    col_names = c("cmd", "value")) %>% 
-  mutate(cmd = str_replace_all(cmd, "([\n\t])", ""))
-  return(tmp)
-}
-
-parse_elapsed <- function(x) {
-  parts <- strsplit(x, ":")
-  sapply(parts, function(p) {
-    mins <- as.numeric(p[1])
-    secs <- as.numeric(p[2])
-    mins * 60 + secs
-  })
-}
-
-getMaxResSize <- function(verboseDF){
-  return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
-}
-
-timingGenes = readVerbose(paste0(allGenesDir, "dna_verbose.txt"))
-timingRNA = readVerbose(paste0(allGenesDir, "rna_verbose.txt"))
-
-
-timingSummary = read_tsv(paste0(gridsearchDir, "time_summary.tsv"),
-                         col_types = cols(elapsed = col_character())) %>% 
-  mutate(mode = pair_mode,
-         elapsed_sec = parse_elapsed(elapsed),
-         max_rss_b = max_rss_kb * 1024) %>% 
-  select(-pair_mode)
-
-
-
-
-timingSummary %>%
-  filter(pair_mode == "or") %>% 
-  group_by(k, threshold) %>% 
-  select(k, threshold, elapsed)
-
-plotMetric("or", elapsed_sec, identity, df = timingSummary)
-plotMetric("or", max_rss_b, identity, df = timingSummary, scaleFunc = scales::label_bytes(accuracy = 0.01))
-
-```
-
-```{r}
-plotRunTimeFixedValue <- function(value1, metric1, xMetric, df = timingSummary, metric2=NA, value2=NA){
-  xString = metricString <- deparse(substitute(xMetric))
-  filterString = paste(deparse(substitute(metric1)), "=", value1)
-  if(!is.na(value2)) 
-    filterString = paste(filterString, "and", deparse(substitute(metric2)), "=", value2)
-
-  
-  df = df %>% 
-    filter({{metric1}} == value1 &
-             (if(!is.na(value2)) {{metric2}} == value2 else T)) %>% 
-    mutate(linetype = mode, x = {{xMetric}}) %>%
-    select(linetype, elapsed_sec, x) 
-  
-  x_breaks <- unique(df$x)
-  
-  p = df %>% 
-    ggplot(aes(x = x, y = elapsed_sec, colour = linetype)) +
-    geom_line() +
-    scale_x_continuous(
-      breaks =  x_breaks,  
-      labels =  x_breaks
-    ) +
-    theme_minimal() +
-    labs(title = paste0("Program time for different ", xString, "s at: ", filterString),
-         x = xString)
-  
-  return(p)
-}
-
-plotRunTimeFixedValue(15, k, threshold, metric2 = offset, value2 = 15)
-plotRunTimeFixedValue(105, threshold, k)
-
-
-
-```
 
 
 ```{r}
