@@ -9,25 +9,10 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/plotting_data/quality/dna/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/plotting_data/quality/dna}"
+GENES="${GENES:-output/plotting_data/quality/rna/gene_list.txt}"
+OUT_BASE="${OUT_BASE:-output/plotting_data/quality/rna}"
 MAX_PARALLEL="${MAX_PARALLEL:-8}"
 
-if [[ ! -f "$JAR" ]]; then
-  echo "ERROR: JAR not found at '$JAR'"
-  exit 1
-fi
-if [[ ! -f "$FW" || ! -f "$RW" || ! -f "$FASTA" || ! -f "$GTF" || ! -f "$GENES" ]]; then
-  echo "ERROR: One or more required input files are missing."
-  echo "FW=$FW"
-  echo "RW=$RW"
-  echo "FASTA=$FASTA"
-  echo "GTF=$GTF"
-  echo "GENES=$GENES"
-  exit 1
-fi
-
-mkdir -p "$OUT_BASE"
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
 declare -a K_VALUES=()
@@ -54,7 +39,6 @@ for k in "${K_VALUES[@]}"; do
 done
 run_idx=0
 executed_runs=0
-copied_runs=0
 
 echo -e "k\toffset\tthreshold\tpair_mode\tmode\tsource_threshold\telapsed\tuser_sec\tsystem_sec\tmax_rss_kb\ttime_file" > "$TIME_SUMMARY"
 
@@ -73,7 +57,6 @@ run_one() {
 
   local time_file="$out_dir/time_verbose.txt"
   local run_log="$out_dir/run.log"
-  local per_run_summary="$out_dir/time_summary.txt"
   local row_file="$out_dir/time_row.tsv"
 
   local -a cmd=(
@@ -89,6 +72,7 @@ run_one() {
     -genes "$GENES"
     -tsv
     -counts
+    -rna
   )
 
   if [[ "$pair_mode" == "or" ]]; then
@@ -107,44 +91,6 @@ run_one() {
   max_rss="$(extract_time_metric "Maximum resident set size (kbytes)" "$time_file")"
 
   echo -e "${k}\t${offset}\t${threshold}\t${pair_mode}\texecuted\t-\t${elapsed:-NA}\t${user_sec:-NA}\t${system_sec:-NA}\t${max_rss:-NA}\t${time_file}" > "$row_file"
-
-  {
-    echo "k=${k}"
-    echo "offset=${offset}"
-    echo "threshold=${threshold}"
-    echo "pair_mode=${pair_mode}"
-    echo "mode=executed"
-    echo "source_threshold=-"
-    echo "elapsed=${elapsed:-NA}"
-    echo "user_sec=${user_sec:-NA}"
-    echo "system_sec=${system_sec:-NA}"
-    echo "max_rss_kb=${max_rss:-NA}"
-    echo "time_file=${time_file}"
-    echo "run_log=${run_log}"
-  } > "$per_run_summary"
-}
-
-append_copied_row() {
-  local k="$1"
-  local offset="$2"
-  local threshold="$3"
-  local src_threshold="$4"
-  local src_dir="$5"
-  local out_dir="$6"
-  local src_row="$src_dir/time_row.tsv"
-  local elapsed="NA"
-  local user_sec="NA"
-  local system_sec="NA"
-  local max_rss="NA"
-
-  if [[ -f "$src_row" ]]; then
-    elapsed="$(awk -F'\t' 'NR==1 {print $6}' "$src_row")"
-    user_sec="$(awk -F'\t' 'NR==1 {print $7}' "$src_row")"
-    system_sec="$(awk -F'\t' 'NR==1 {print $8}' "$src_row")"
-    max_rss="$(awk -F'\t' 'NR==1 {print $9}' "$src_row")"
-  fi
-
-  echo -e "${k}\t${offset}\t${threshold}\tcopied\t${src_threshold}\t${elapsed}\t${user_sec}\t${system_sec}\t${max_rss}\t$src_dir/time_verbose.txt" > "$out_dir/time_row.tsv"
 }
 
 throttle_jobs() {
@@ -176,16 +122,6 @@ write_global_summary() {
       cat "$row"
     done
   } > "$TIME_SUMMARY"
-}
-
-copy_equivalent_outputs() {
-  local src_dir="$1"
-  local dst_dir="$2"
-  local src_threshold="$3"
-
-  cp "$src_dir/read2gene_matrix.tsv" "$dst_dir/read2gene_matrix.tsv"
-  cp "$src_dir/gene_counts.tsv" "$dst_dir/gene_counts.tsv"
-  printf "copied_from_threshold=%s\n" "$src_threshold" > "$dst_dir/copied_from.txt"
 }
 
 echo "Starting grid search"
@@ -222,6 +158,5 @@ write_global_summary
 
 echo "Grid search finished. Results are in: $OUT_BASE"
 echo "Executed runs: $executed_runs"
-echo "Copied runs:   $copied_runs"
 
-python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir "$OUT_BASE" --threads 1
+python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir "$OUT_BASE" --threads 2
