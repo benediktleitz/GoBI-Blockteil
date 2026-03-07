@@ -25,6 +25,7 @@ public class Config {
     public static Einleseroutine EINLESEROUTINE;
     public static boolean OR;
     public static int THREADS;
+    public static int CHUNK_SIZE;
 
     public static AtomicLong TIMING = new AtomicLong(0);
 
@@ -68,6 +69,7 @@ public class Config {
         OR = cmd.hasOption("or");
 
         THREADS = Integer.parseInt(cmd.getOptionValue("threads", "5"));
+        CHUNK_SIZE = Integer.parseInt(cmd.getOptionValue("chunksize", "50000"));
     }
 
     public static void setGeneArray(String[] geneArray) {

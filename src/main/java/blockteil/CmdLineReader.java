@@ -115,6 +115,11 @@ public class CmdLineReader {
                 .hasArg()
                 .desc("number of threads to use for read processing, default=5")
                 .build();
+        
+        Option chunksize = Option.builder("chunksize")
+                .hasArg()
+                .desc("number of reads to process in each chunk, default=50000")
+                .build();
 
 
         options.addOption(fw);
@@ -135,6 +140,7 @@ public class CmdLineReader {
         options.addOption(rna);
         options.addOption(or);
         options.addOption(threads);
+        options.addOption(chunksize);
         return options;
     }
 
