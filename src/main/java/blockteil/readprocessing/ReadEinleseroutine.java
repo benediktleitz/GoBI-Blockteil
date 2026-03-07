@@ -18,8 +18,7 @@ public class ReadEinleseroutine {
 
 
     public static void filterReads(String fw_file, String rw_file, String outputDir) {
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        numThreads = 5;
+        int numThreads = Config.THREADS;
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
         List<Future<?>> futures = new ArrayList<>();

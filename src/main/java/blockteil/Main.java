@@ -45,6 +45,7 @@ public class Main {
             reader.read(genesToAdd);
             creator.addKMERS(reader.id2gene);
         } else if (gtf != null){
+            System.out.println("Warning: Now trying to add k-mers for all protein-coding genes in GTF file, this may take a while and consume a lot of memory. Consider providing a list of genes to analyze with the -genes option to reduce runtime and memory usage.");
             try {
                 Einleseroutine reader = Config.EINLESEROUTINE;
                 reader.read(null);

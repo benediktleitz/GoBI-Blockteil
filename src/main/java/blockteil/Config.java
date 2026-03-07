@@ -24,6 +24,7 @@ public class Config {
     public static ReferenceKMERSetCreator REFERENCE_KMER_SET_CREATOR;
     public static Einleseroutine EINLESEROUTINE;
     public static boolean OR;
+    public static int THREADS;
 
     public static AtomicLong TIMING = new AtomicLong(0);
 
@@ -65,6 +66,8 @@ public class Config {
             EINLESEROUTINE = gtf != null ? new DNAEinleseroutine(gtf) : null;
         }
         OR = cmd.hasOption("or");
+
+        THREADS = Integer.parseInt(cmd.getOptionValue("threads", "5"));
     }
 
     public static void setGeneArray(String[] geneArray) {
