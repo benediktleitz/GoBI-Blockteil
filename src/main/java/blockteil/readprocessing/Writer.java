@@ -2,7 +2,7 @@ package blockteil.readprocessing;
 
 import blockteil.Config;
 import blockteil.KMER;
-import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -85,7 +85,7 @@ public class Writer {
     public static void writeKmerMap(String outputFile) {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
             bw.write("kmer\tgene\n");
-            ShortOpenHashSet geneIndices;
+            IntOpenHashSet geneIndices;
             for (long kmerLong : Config.KMER_MAP.keySet()) {
                 bw.write(KMER.decodeKmer(kmerLong));
                 bw.write("\t");
