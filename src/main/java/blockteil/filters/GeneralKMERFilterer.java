@@ -14,10 +14,10 @@ public class GeneralKMERFilterer extends KMERFilterer {
         A: for (int i = 0; i < seq.length() - Config.KMER_LENGTH + 1; i += Config.OFFSET) {
             kmer = revcomp ? KMER.makeKMER_revcomp(seq, i) : KMER.makeKMER(seq, i);
 
-            Set<Short> matchingGenes = Config.KMER_MAP.get(kmer);
+            Set<Integer> matchingGenes = Config.KMER_MAP.get(kmer);
             if (matchingGenes == null) continue;
 
-            for (short gene : matchingGenes) {
+            for (int gene : matchingGenes) {
                 BitSet matched = geneToMatchedPositions[gene];
                 if (matched == null) {
                     matched = new BitSet();
