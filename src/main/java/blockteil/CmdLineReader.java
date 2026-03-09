@@ -121,6 +121,11 @@ public class CmdLineReader {
                 .desc("number of reads to process in each chunk, default=50000")
                 .build();
 
+        Option kmerMap = Option.builder("kmerMap")
+                .hasArg()
+                .desc("path to output kmer map file (for plotting purposes)")
+                .build();
+
 
         options.addOption(fw);
         options.addOption(rw);
@@ -141,6 +146,7 @@ public class CmdLineReader {
         options.addOption(or);
         options.addOption(threads);
         options.addOption(chunksize);
+        options.addOption(kmerMap);
         return options;
     }
 
