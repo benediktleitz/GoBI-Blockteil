@@ -14,27 +14,7 @@ library(scales)
 ```
 
 ```{r}
-themeForSaving <- function() {
-  theme(
-    text = element_text(size = 14),
-    axis.text.x = element_text(angle = 0, hjust = 1, size = 12),
-    axis.text.y = element_text(size = 12),
-    axis.title = element_text(size = 14),
-    plot.title = element_text(size = 18, face = "bold"),
-    plot.subtitle = element_text(size = 14),
-    legend.position = c(0.98, 0.5),
-    legend.justification = c(1, 1),
-    legend.background = element_rect(fill = "white", colour = "grey80"),
-    legend.text = element_text(size = 12),
-    legend.title = element_blank()
-  )
-}
-
-savePlotReport <- function(filepath, p){
-  ggsave(filepath, p, width = 2100, height = 1050, units = "px")
-}
-
-
+source("functions.R")
 ```
 
 
@@ -68,13 +48,13 @@ getMaxResSize <- function(verboseDF){
   return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
 }
 
-readTiming <- function(typeStr){
-  df = read_tsv(paste0(gridsearchDir, typeStr, "/time_summary.tsv"),
+readTiming <- function(moleculeStr){
+  df = read_tsv(paste0(gridsearchDir, moleculeStr, "/time_summary.tsv"),
                          col_types = cols(elapsed = col_character())) %>% 
   mutate(mode = pair_mode,
+         molecule = moleculeStr,
          elapsed_sec = parse_elapsed(elapsed),
-         max_rss_b = max_rss_kb * 1024,
-         molecule = typeStr) %>% 
+         max_rss_b = max_rss_kb * 1024) %>% 
   select(-pair_mode)
   return(df)
 }
@@ -84,8 +64,9 @@ readTiming <- function(typeStr){
 
 
 ```{r}
-timing_dna = readTiming("dna") 
+timing_dna = readTiming("dna")
 timing_rna = readTiming("rna")
+
 
 timingSummary = rbind(timing_dna, timing_rna) %>% 
   mutate(linetype = paste(molecule, mode))
@@ -150,10 +131,16 @@ plotRunTimeFixedValue <- function(value1, metric1, xMetric, df = timingSummary, 
 
 
 ```{r}
-p = plotRunTimeFixedValue(15, k, threshold, metric2 = offset, value2 = 15)
+plotRunTimeFixedValue(15, k, threshold, metric2 = offset, value2 = 15)
 plotRunTimeFixedValue(105, threshold, k)
 
 
-savePlotReport(paste0(gridsearchDir, "test", extType), p)
+
+#savePlotReport(paste0(gridsearchDir, "test", extType), p)
+```
+
+
+```{r}
 
 ```
+
