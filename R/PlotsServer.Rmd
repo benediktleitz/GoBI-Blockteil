@@ -12,6 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r cars}
 library(tidyverse)
 library(scales)
+source("functions.R")
+library(cowplot)
 ```
 
 ```{r}
@@ -29,41 +31,6 @@ long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_rea
 
 
 ```{r}
-plotMetric <- function(modeString, metric, func, 
-                       save = F, 
-                       df = long_summary, 
-                       scaleFunc = scales::label_number(accuracy = 0.0001)){
-  metricString <- deparse(substitute(metric))
-  funcString <- deparse(substitute(func))
-  p = df %>% 
-  filter(mode == modeString) %>% 
-  group_by(k, threshold) %>% 
-  mutate(summarisedMetric = func({{ metric }})) %>%
-  ggplot(aes(x = factor(k),
-             y = factor(threshold),
-             fill = summarisedMetric)) +
-  geom_tile() +
-  geom_text(
-  aes(label = scaleFunc(summarisedMetric)),
-  size = 2)  +
-    scale_fill_gradient(
-    low = "#25ced1",
-    high = "#ea526f",
-    name =  metricString
-  ) +
-  coord_fixed() +
-    labs(title = paste(modeString, metricString, funcString)) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank()
-  )
-  if(save){
-    filename = paste(sep = "_", metricString, modeString, funcString)
-    pathname = paste0(plotsDir, "HeatMaps/", filename, extType)
-    ggsave(pathname, p)
-  }
-  return(p)
-}
 
 
 ```
@@ -71,14 +38,24 @@ plotMetric <- function(modeString, metric, func,
 
 ```{r}
 plotMetric("or", not_recall, min)
-plotMetric("or", not_precision, min)
+plotMetric("or", not_precision, mean,
+           df = long_summary %>% filter(filtered_reads > 0))
+
+plotMetric("or", not_filtered, max, scaleFunc = scales::label_number())
 
 plotMetric("and", not_recall, min)
 
-plotMetric("or", filtered_reads, max, T, 
-                 df = long_summary %>% filter( k  > 10), 
-                 scaleFunc = scales::label_number())
 
+
+plotMetric("and", filtered_reads, max, F, 
+                 df = long_summary %>% filter( k  > 10), 
+                 scaleFunc = scales::label_number(),
+           #limits = c(0, max(long_summary$filtered_reads))
+           limits = NULL
+           )
+
+
+long_summary %>% arrange(desc(not_filtered)) %>% filter(mode == "or")
 
 
 
@@ -95,7 +72,6 @@ plot_readCountByThreshold <- function(t_val, modeString) {
     plot_data = plot_data %>% filter(mode == modeString)
   }
   
-  # Calculate scale factor for secondary axis (using overall max values)
   max_filtered <- max(plot_data$filtered_reads, na.rm = TRUE)
   max_not_filtered <- max(plot_data$not_filtered, na.rm = TRUE)
   scale_factor <- max_filtered / max_not_filtered
@@ -137,9 +113,10 @@ plot_readCountByThreshold <- function(t_val, modeString) {
     labs(title = paste("Read Counts by k ( threshold =", t_val, ", mode =",modeString,")"),
          color = "Read Type") +
     theme_bw() +
+    themeForSaving() +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
       legend.position = "bottom",
+      legend.justification = "center",
       panel.grid.minor = element_blank()
     ) +
     scale_color_manual(values = c("Filtered Reads" = "#25ced1", 
@@ -152,18 +129,97 @@ plot_readCountByThreshold <- function(t_val, modeString) {
   return(p)
 }
 
-saveReadCountsByThreshold <- function(modes = c("or", "and", "both")){
+
+plot_readCountByThreshold(105, "both")
+#savePlotReport("test.jpg", p)
+```
+
+```{r}
+plot_readCountBoxByThreshold <- function(t_val, modeString) {
+
+  plot_data <- long_summary %>% 
+    filter(threshold == t_val)
+
+  if (modeString != "both") {
+    plot_data <- plot_data %>% filter(mode == modeString)
+  }
+
+  max_filtered <- max(plot_data$filtered_reads, na.rm = TRUE)
+  max_not_filtered <- max(plot_data$not_filtered, na.rm = TRUE)
+  scale_factor <- max_filtered / max_not_filtered
+
+  plot_data_long <- plot_data %>%
+    tidyr::pivot_longer(
+      cols = c(filtered_reads, not_filtered),
+      names_to = "read_type",
+      values_to = "read_count"
+    ) %>%
+    mutate(
+      read_type = dplyr::recode(
+        read_type,
+        filtered_reads = "Filtered Reads",
+        not_filtered = "Not Filtered Reads"
+      ),
+      read_count = ifelse(
+        read_type == "Not Filtered Reads",
+        read_count * scale_factor,
+        read_count
+      )
+    )
+
+  p <- ggplot(plot_data_long,
+              aes(x = factor(k),
+                  y = read_count,
+                  color = read_type,
+                  fill = after_scale(scales::alpha(color, 0.4)))) +
+    geom_boxplot(position = position_dodge(width = 0.75),
+                 outlier.size = 1) +
+    scale_y_continuous(
+      name = "Filtered Reads",
+      labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+      sec.axis = sec_axis(~ . / scale_factor,
+                          name = "Not Filtered Reads",
+                          labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+    ) +
+    scale_color_manual(values = c(
+      "Filtered Reads" = "#2EC4B6",
+      "Not Filtered Reads" = "#EA526F"
+    )) +
+    labs(
+      title = paste("Read Counts by k (threshold =", t_val, ", mode =", modeString, ")"),
+      x = "k",
+      fill = "Read Type"
+    ) +
+    themeForSaving() +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      legend.justification = "center",
+      panel.grid.minor = element_blank()
+    ) 
+
+  if (modeString == "both") {
+    p <- p + facet_wrap(~mode)
+  }
+
+  return(p)
+}
+
+saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
   for(t in unique(long_summary$threshold)) {
   for(mode in modes){
-    p = plot_readCountByThreshold(t, mode)
-    pathname=paste0(plotsDir, "ReadCount/ByThreshold/ReadCountByThreshold_T", t, "_", mode, extType)
-    ggsave(pathname, p)
+    p = plotFunc(t_val = t, modeString = mode)
+    pathname=paste0(plotsDir, "ReadCount/Box/ReadCountByThreshold_T", t, "_", mode, extType)
+    savePlotReport(pathname, p)
   }
 }
 }
 
-plot_readCountByThreshold(105, "both")
+saveReadCounts(modes = c("both"), plotFunc = plot_readCountBoxByThreshold)
+
+
 ```
+
 
 ```{r}
 tsv = read_tsv(paste0(gridsearchDir, "k_17/offset_17/threshold_90/mode_and/read2gene_matrix.tsv"))
@@ -175,7 +231,7 @@ tsv %>% mutate(rowsum = rowSums(.[2:9])) %>% summarise(avg = mean(rowsum))
 
 ```{r}
 #saveReadCountsByThreshold( c("both"))
-saveReadCountsByThreshold()
+#saveReadCountsByThreshold()
 
 fullGenes = read_tsv(paste0(allGenesDir, "dna_gene_counts.tsv"))
 fullRNA = read_tsv(paste0(allGenesDir, "gene_counts.tsv"))
@@ -188,7 +244,7 @@ plotCountDistribution <- function(df, colour, typeString){
   p = df %>% 
   ggplot(aes(x = count +1)) +
   geom_histogram(bins = 100, fill = colour) +
-  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale()))+
+  scale_x_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale()))+
   scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
   labs(title = paste(typeString, "Count Distribution"),
        subtitle = paste0("(", parameterString, ")")) +
@@ -198,14 +254,152 @@ plotCountDistribution <- function(df, colour, typeString){
 ```
 
 ```{r}
-plotCountDistribution(fullGenes, "deepskyblue4", "Gene")
-plotCountDistribution(fullRNA, "deepskyblue3", "Transcript")
+p = plotCountDistribution(fullGenes, "deepskyblue4", "Gene")
+savePlotReport(paste0(plotsDir, "geneCounts_cont", extType), p)
+p = plotCountDistribution(fullRNA, "deepskyblue3", "Transcript")
+savePlotReport(paste0(plotsDir, "TranscriptCounts_cont", extType), p)
+
 ```
 
 
 
 ```{r}
 
+
 ```
 
+```{r}
+sampleGenes %>% select(gene) %>% write.table("../output/gene_list.txt",
+              row.names = FALSE,
+              col.names = FALSE,
+              quote = FALSE)
+
+readcounts %>% write_tsv(file = "../output/read_counts.tsv")
+
+
+```
+
+### scatter plot tradeoff (filter vs matched)
+
+```{r}
+readTotalSummary <- function(ext){
+  df = read_tsv(paste0(gridsearchDir, "totalCountSummary", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
+                                                                                  matched = totalFiltered - filtered_not_mapped)
+  return(df)
+}
+getMappingReads<- function(gene_id, df = long_summary){
+  return(df %>% filter(gene == gene_id) %>% summarise(x = min(mapping_reads)) %>% pull(x))
+}
+
+totalCounts = readTotalSummary()
+totalCounts_no18 = readTotalSummary("_excluding_ENSSSCG00000018081") %>% mutate(totalMapped = totalMapped - getMappingReads("ENSSSCG00000018081"))
+
+
+
+```
+
+```{r}
+totalCounts %>% mutate(filteredFraction = totalFiltered / nFastqReads, mappingRate = matched/totalMapped) %>% arrange(desc(mappingRate))
+```
+
+```{r}
+barPlotMappingRate <- function(val, metric, xFactor, df = totalCounts){
+  metricString = deparse(substitute(metric))
+  xString = deparse(substitute(xFactor))
+  
+  p = df %>% filter({{metric}} == val) %>%
+  mutate(mappingRate = matched/totalMapped) %>% 
+  ggplot(aes(x = factor({{xFactor}}), y = mappingRate, fill = mode)) +
+    geom_col(position = "dodge") +
+  themeForSaving() +
+  theme(legend.position = "right", legend.justification = "center") +
+  labs(title = paste("Mapping Rate per mode and", xString),
+       subtitle = paste("at", metricString, "=", val),
+       x = xString,
+       y = "matched/mapped") +
+  coord_cartesian(ylim = c(0,1))
+  return(p)
+}
+
+#barPlotMappingRate(12, k, threshold)
+
+saveMappingRates <- function(df = totalCounts, caption = ""){
+  for(k_val in unique(df$k)){
+    p = barPlotMappingRate(k_val, k, threshold, df) + labs(caption = caption)
+    savePlotReport(paste0(plotsDir, "bars/K/mappingrate_K", k_val, caption ,extType), p)
+  }
+  for(t_val in unique(df$threshold)){
+    p = barPlotMappingRate(t_val, threshold, k, df) + labs(caption = caption) 
+    savePlotReport(paste0(plotsDir, "bars/T/mappingrate_T", t_val, caption ,extType), p)
+
+    
+  }
+}
+```
+
+
+
+```{r}
+saveMappingRates(totalCounts_no18, "No_ENSSSCG00000018081")
+```
+
+```{r}
+saveMappingRates()
+```
+
+
+```{r}
+
+
+plotScatterTradeOff <- function(modeString){
+  p = totalCounts %>%  filter(mode == modeString) %>% 
+  mutate(mappingRate = matched/totalMapped,
+         filteredRate = totalFiltered/nFastqReads) %>% 
+  ggplot(aes(x = mappingRate, y = filteredRate)) +
+  geom_point(aes(shape = factor(threshold), color = factor(k)), size = 2.5, alpha = 0.7) +
+  labs( x = "matched/mapped", y = "filtered/all") +
+  themeForSaving() +
+  theme(legend.position = "right", legend.justification = "center") +
+  labs(title = "Mappingrate vs Filterrate tradeoff",
+       subtitle = paste("Mode:", modeString)) +
+  coord_cartesian(xlim = c(0,1), ylim = c(0, 0.07))
+  
+  return(p)
+}
+
+for(mode in c("or", "and")){
+  p = plotScatterTradeOff(mode)
+  savePlotReport(paste0(plotsDir, "scatter/mapping_filter_", mode, extType), p)
+}
+
+p = plotScatterTradeOff("or")
+plotScatterTradeOff("and")
+```
+
+```{r}
+plotRecallPrecision <- function(modeString){
+  totalCounts %>% 
+  filter(mode == modeString) %>% 
+  mutate(recall = matched/totalMapped,
+                       precision = matched/totalFiltered) %>% 
+  ggplot(aes(x = recall, y=precision)) +
+  geom_point(aes(shape = factor(threshold), color = factor(k)), size = 2.5, alpha = 0.7) +
+  themeForSaving() +
+  theme(legend.position = "right", legend.justification = "center") +
+  labs(title = "Precision vs Recall",
+       subtitle = paste("Mode:", modeString)) +
+  coord_cartesian(xlim = c(0,1), ylim=c(0,1))
+}
+
+for(mode in c("or", "and")){
+  p = plotRecallPrecision(mode)
+  savePlotReport(paste0(plotsDir, "precision_recall/precision_recall_", mode, extType), p)
+  #l = get_legend(p)
+  #ggsave(paste0(gridsearchDir, "precision_recall_legend_bottom", extType), l)
+}
+
+
+
+## and more precision, or more recall -> we want to increse recall to 1
+```
 

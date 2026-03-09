@@ -1,0 +1,479 @@
+---
+title: "TimingSamples"
+output: html_document
+date: "2026-03-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+library(rlang)
+source("functions.R")
+```
+
+```{r}
+gridsearchDir = "../output/plotting_data/runtime_analysis/"
+plotsDir = paste0(gridsearchDir, "plots/legendTitled/")
+extType = ".jpg"
+
+
+```
+
+
+```{r}
+saveFullPlots <- function(plottingFunction, title, actuallySave = T, ...){
+  p = plottingFunction(threshold, k, 15, offset, 15, ...)
+  if(actuallySave) {
+    savePlotReport(paste0(plotsDir, title, "_T", extType), p)
+  } else {
+    print(p)
+  }
+  
+  p = plottingFunction(k, threshold, 105, offset, k, ...)
+  if(actuallySave) {
+    savePlotReport(paste0(plotsDir, title, "_K", extType), p)
+  } else {
+    print(p)
+  }
+  
+  p = plottingFunction(offset, k, 15, threshold, 105, ...)
+  if(actuallySave) {
+    savePlotReport(paste0(plotsDir, title, "_O", extType), p)
+  } else {
+    print(p)
+  }
+}
+```
+
+
+```{r}
+readTiming <- function(){
+  df = read_tsv(paste0(gridsearchDir,  "time_summary.tsv"),
+                         col_types = cols(elapsed = col_character())) %>% 
+  mutate(mode = pair_mode,
+         elapsed_sec = parse_elapsed(elapsed),
+         max_rss_b = max_rss_kb * 1024) %>% 
+  select(-pair_mode)
+  return(df)
+}
+```
+
+```{r}
+readcounts = read_tsv(file = "../output/read_counts.tsv") %>% 
+  mutate(sample = str_split_i(filename, "_", 1)) %>% 
+  group_by(sample) %>% 
+  summarise(count = max(read_count))
+
+timingFull = readTiming() %>% inner_join(readcounts, by = join_by(sample)) %>%
+  mutate(secPerRead = elapsed_sec / count,
+         readsPerMin = count / elapsed_sec * 60,
+         milReadsPerMin = readsPerMin / 1e6
+         ) %>%
+  mutate(sampleShort = str_split_i(sample, "-", 1))
+
+timingSummarised = timingFull %>%
+  summarise(
+    MeanReadsPerMin = mean(readsPerMin),
+    maxMaxByte = max(max_rss_b),
+    meanMaxByte = mean(max_rss_b),
+    cpuUtil = mean((user_sec + system_sec) / elapsed_sec),
+    maxCpuUtil = max((user_sec + system_sec) / elapsed_sec),
+    maxCpu = max(percent_cpu),
+    .by = c(k, offset, threshold, sampleShort, count)
+  ) 
+```
+
+```{r}
+
+res = timingFull %>% 
+  mutate(readsPerMin = 60 * count / (elapsed_sec)) %>%
+  summarise(min = min(readsPerMin), max = max(readsPerMin))
+lims = c(floor(res$min / 100) * 100, ceiling(res$max / 100) * 100)
+
+plotFullTiming <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL){
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+
+
+  df <- timingSummarised %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+
+  p <- df %>%
+    ggplot(aes(x = !!xMetric, y = MeanReadsPerMin, color = factor(sampleShort))) +
+    geom_line() +
+    geom_point(size = 1) +
+    scale_y_continuous(
+      name = "Mean Reads Per Minute",
+      labels = scales::label_number(scale_cut = scales::cut_short_scale())
+    ) +
+    scale_x_continuous(
+      breaks = x_breaks,
+      labels = x_breaks
+    ) +
+    themeForSaving() +
+    theme(legend.position = "bottom", legend.justification = "center") +
+    labs(title = paste("Mean Reads Per Minute through", xString),
+         subtitle = subStr,
+         col = "sample") +
+    coord_cartesian(ylim = lims)
+
+  return(p)
+}
+
+saveFullPlots(plotFullTiming, "meanReads", T)
+
+ 
+```
+
+```{r}
+res = timingSummarised %>% 
+  summarise(min = min(meanMaxByte), max = max(meanMaxByte))
+lims = c(0, ceiling(res$max / 100) * 100)
+
+plotByte <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, df = timingSummarised, limsList = lims, titleMetric = "Mean Max Resident Size"){
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+  
+  df <- df %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+  
+  p <- df %>% 
+  ggplot(aes( x =  {{xMetric}}, y = meanMaxByte, colour = sampleShort)) +
+    geom_line() +
+    geom_point() +
+    scale_y_continuous(
+      name = titleMetric,
+      labels = scales::label_bytes(accuracy = 0.1)
+    ) +
+    scale_x_continuous(
+      breaks = x_breaks,
+      labels = x_breaks
+    ) +
+    themeForSaving() +
+    theme(legend.position = "bottom", legend.justification = "center") +
+    labs(title = paste(titleMetric, "through", xString),
+         subtitle = subStr,
+         col = "sample") +
+    coord_cartesian(ylim = limsList)
+  
+  return(p)
+  
+  
+
+}
+
+
+saveFullPlots(plotByte, "MeanByte")
+
+
+
+```
+
+
+```{r}
+df = timingSummarised %>% mutate(meanMaxByte = meanMaxByte / cpuUtil)
+res = df %>% 
+  summarise(min = min(meanMaxByte), max = max(meanMaxByte))
+lims = c(0, ceiling(res$max / 100) * 100)
+
+saveFullPlots(plotByte, "bytePerCore", T,df = df, limsList = lims, titleMetric = "Mean Max Memory Per Core")
+
+df = timingSummarised %>% 
+  mutate(#meanMaxByte = meanMaxByte / cpuUtil,
+         #meanMaxByte = count / (meanMaxByte)
+         )
+
+#saveFullPlots(plotByte, "ah", F, df =df)
+
+```
+
+```{r}
+res = timingFull %>% 
+  mutate(readsPerCpuSec = count / (user_sec + system_sec)) %>%
+  summarise(min = min(readsPerCpuSec), max = max(readsPerCpuSec))
+lims = c(floor(res$min / 100) * 100, ceiling(res$max / 100) * 100)
+
+
+
+plotPerCPUSec <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, minute = F){
+  timeUnit = "sec"
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+  
+  df <- timingFull %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+  
+  df <- df %>% 
+    mutate(readsPerCpuSec = count / (user_sec + system_sec)) %>%
+    summarise(meanReadsPerCPUSec = mean(readsPerCpuSec), 
+              .by = c(k, offset, threshold, sampleShort, count))
+  
+  if(minute){
+    lims = 60*lims
+    timeUnit = "min"
+    df = df %>% mutate(meanReadsPerCPUSec = meanReadsPerCPUSec * 60)
+  }
+  
+  p = df %>%
+    ggplot(aes(x = {{xMetric}}, y = meanReadsPerCPUSec, colour = sampleShort)) +
+    geom_point() +
+    geom_line() +
+    scale_y_continuous(
+      name = paste("Mean Reads Per CPU", timeUnit),
+      labels = scales::label_number(scale_cut = scales::cut_short_scale())    
+    ) +
+    scale_x_continuous(
+      breaks = x_breaks,
+      labels = x_breaks
+    ) +
+    themeForSaving() +
+    theme(legend.position = "bottom", legend.justification = "center") +
+    labs(title = paste("Mean Reads Per CPU", timeUnit, "through", xString),
+         subtitle = subStr,
+         col = "sample") +
+    coord_cartesian(ylim = lims)
+  
+  return(p)
+}
+
+saveFullPlots(plotPerCPUSec, "meanReadsCPUSec", T, minute = F)
+
+
+```
+
+```{r}
+plotByte <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, df = timingSummarised){
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+  
+  df <- df %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+  
+  p <- df %>% 
+  ggplot(aes( x =  {{xMetric}}, y = meanMaxByte, colour = sampleShort)) +
+    geom_line() +
+    geom_point() +
+    scale_y_continuous(
+      name = "Max Resident Size",
+      labels = scales::label_bytes(accuracy = 0.1)
+    ) +
+    scale_x_continuous(
+      breaks = x_breaks,
+      labels = x_breaks
+    ) +
+    themeForSaving() +
+    theme(legend.position = "bottom", legend.justification = "center") +
+    labs(title = paste("Mean Max Resident Size through", xString),
+         subtitle = subStr)
+  
+  return(p)
+  
+  
+
+}
+
+p = timingSummarised %>% 
+  ggplot(aes(x = meanMaxByte, y = MeanReadsPerMin, colour = factor(offset))) +
+  geom_point() +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_continuous(labels = label_bytes(accuracy = 0.01)) +
+  themeForSaving() +
+  theme(legend.position ="right", legend.justification = "center") +
+  labs(title = "Summarised Max RSS vs Reads Per Minute",
+       col = "offset")
+savePlotReport(paste0(plotsDir, "scatter_maxRSS_RPM", extType), p)
+```
+
+```{r}
+scatterMaxRSS_RPM <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, df = timingSummarised){
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+  
+  df <- df %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+  
+  p = df %>% 
+  ggplot(aes(x = meanMaxByte, y = MeanReadsPerMin, colour = factor({{xMetric}}))) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  scale_x_continuous(labels = label_bytes(accuracy = 0.01)) +
+  themeForSaving() +
+  theme(legend.position ="right", legend.justification = "center") +
+  labs(title = paste("Mean Max RSS vs Reads Per Minute through", xString),
+         subtitle = subStr,
+         col = xString) +
+  coord_cartesian(ylim = c(10000000, 14500000))
+  
+  return(p)
+}
+
+saveFullPlots(scatterMaxRSS_RPM, "scatter_maxRSS_RPM", T)
+```
+
+```{r}
+
+```
+CPU scaling
+x: parameter
+y: cpuUtil
+
+Algorithm efficiency
+x: parameter
+y: readsPerCpuSec
+
+Memory efficiency
+x: parameter
+y: readsPerGB
+
+Performance tradeoff (best figure)
+x: memory (GB)
+y: MRPM
+color: k
+
+```{r}
+df = timingSummarised %>% 
+  summarise(min = min(maxCpuUtil), max = max(maxCpuUtil))
+lims = c(0, ceiling(df$max))
+
+plotParamCpuUtil <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, df = timingSummarised){
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
+
+  xMetric <- rlang::enquo(xMetric)
+  filter1Metric <- rlang::enquo(filter1Metric)
+  filter2Metric <- rlang::enquo(filter2Metric)
+  filter2Value <- rlang::enquo(filter2Value)
+  
+  xString = rlang::as_name(xMetric)
+  subStr = paste(rlang::as_name(filter1Metric), "=", filter1Value)
+  
+  df <- df %>% 
+    filter(!!filter1Metric == filter1Value)
+
+  if (!rlang::quo_is_null(filter2Value)) {
+    df <- df %>% filter(!!filter2Metric == !!filter2Value)
+    subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
+  }
+
+  x_breaks <- df %>% pull(!!xMetric) %>% unique()
+  
+  p <- df %>% 
+  ggplot(aes( x =  {{xMetric}}, y = maxCpuUtil, colour = sampleShort)) +
+    geom_line() +
+    geom_point() +
+    coord_cartesian(ylim = lims) +
+    scale_y_continuous(
+      name = "Max CPU Usage",
+      labels = scales::label_percent()
+    ) +
+    scale_x_continuous(
+      breaks = x_breaks,
+      labels = x_breaks
+    ) +
+    themeForSaving() +
+    theme(legend.position = "bottom", legend.justification = "center") +
+    labs(title = paste("Max CPU Usage through", xString),
+         subtitle = subStr,
+         col = "sample") 
+  
+  return(p)
+  
+  
+
+}
+
+saveFullPlots(plotParamCpuUtil, "cpuUsage",F)
+
+```
+
