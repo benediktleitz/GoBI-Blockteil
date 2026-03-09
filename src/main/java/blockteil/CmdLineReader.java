@@ -59,7 +59,7 @@ public class CmdLineReader {
                 .required()
                 .build();
 
-        Option genes = Option.builder("genes") //maybe if genes nicht gesetzt -> alle Gene analysieren
+        Option genes = Option.builder("genes")
                 .hasArg()
                 .desc("list of genes to analyze, newline-separated")
                 .build();
@@ -110,6 +110,16 @@ public class CmdLineReader {
         Option or = Option.builder("or")
                 .desc("optional flag to use OR instead of AND for filtering to combine filtering of pair-end reads")
                 .build();
+        
+        Option threads = Option.builder("threads")
+                .hasArg()
+                .desc("number of threads to use for read processing, default=5")
+                .build();
+        
+        Option chunksize = Option.builder("chunksize")
+                .hasArg()
+                .desc("number of reads to process in each chunk, default=50000")
+                .build();
 
 
         options.addOption(fw);
@@ -129,11 +139,17 @@ public class CmdLineReader {
         options.addOption(counts);
         options.addOption(rna);
         options.addOption(or);
+        options.addOption(threads);
+        options.addOption(chunksize);
         return options;
     }
 
     public String getOptionValue(String option){
         return cmd.getOptionValue(option);
+    }
+
+    public String getOptionValue(String option, String defaultValue){
+        return cmd.getOptionValue(option, defaultValue);
     }
 
     public boolean hasOption(String option) {

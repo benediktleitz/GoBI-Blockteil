@@ -12,14 +12,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ReadEinleseroutine {
 
-    private static final int CHUNK_SIZE = 50000; // number of reads per chunk
-
-    // Class to hold one FASTQ record
-
-
     public static void filterReads(String fw_file, String rw_file, String outputDir) {
-        int numThreads = Runtime.getRuntime().availableProcessors();
-        numThreads = 5;
+        int numThreads = Config.THREADS;
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         ReentrantLock writeLock = new ReentrantLock();  // ensures safe writes
         List<Future<?>> futures = new ArrayList<>();
@@ -32,7 +26,7 @@ public class ReadEinleseroutine {
             ) {
             writers = Writer.makeBufferedWriters(outputDir);
             final BufferedWriter[] sharedWriters = writers;
-            List<FastqRecord> chunk = new ArrayList<>(CHUNK_SIZE);
+            List<FastqRecord> chunk = new ArrayList<>(Config.CHUNK_SIZE);
             String line_fw;
             String line_rw;
 
@@ -51,7 +45,7 @@ public class ReadEinleseroutine {
 
                 chunk.add(new FastqRecord(line_fw, line_rw, fw, rw, fw_quality, rw_quality));
 
-                if (chunk.size() >= CHUNK_SIZE) {
+                if (chunk.size() >= Config.CHUNK_SIZE) {
                     // Submit chunk for parallel processing
                     List<FastqRecord> chunkToProcess = new ArrayList<>(chunk);
                     futures.add(executor.submit(() -> {
