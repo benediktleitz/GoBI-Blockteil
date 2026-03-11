@@ -1,9 +1,7 @@
-import pandas as pd
 import pysam
 import argparse
 import pyranges as pr
 import os
-import re
 
 
 def normalize_read_id(read_id):
@@ -64,19 +62,20 @@ def write_gene_read_list_pileup(bamfile, chrom, start, end, gene_name, output_di
         for rid in sorted(read_ids):
             f.write(f"{rid}\n")
 
-def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir):
+def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir, clip_threshold):
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
     read_ids = set()
     for read in bamfile.fetch(chrom, start, end):
-        if skip_read(read, chrom): continue
+        if skip_read(read, chrom, clip_threshold):
+            continue
         read_ids.add(normalize_read_id(read.query_name))
 
     with open(output_file, 'w') as f:
         for rid in sorted(read_ids):
             f.write(f"{rid}\n")
 
-def skip_read(read, chrom):
+def skip_read(read, chrom, threshold=105):
     if read.is_unmapped:
         return True
     if read.is_secondary:
@@ -95,8 +94,19 @@ def skip_read(read, chrom):
         return True
     if read.next_reference_name != chrom:
         return True
+    if clipped_bases(read) > threshold:
+        return True
     
     return False
+
+def clipped_bases(read):
+    if read.cigartuples is None:
+        return 0
+    clipped = 0
+    for op, length in read.cigartuples:
+        if op in (4, 5):  # 4: soft clip, 5: hard clip
+            clipped += length
+    return clipped
 
 def main(args):
     if args.rna:
@@ -106,25 +116,35 @@ def main(args):
         genes2positions = make_gene_to_position_dict(args.gtf, args.gene_list)
         positions = genes2positions
     bamfile = pysam.AlignmentFile(args.mapping, "rb")
-    
-    for gene, (chrom, start, end) in positions.items():
-        if args.method == "pileup":
-            write_gene_read_list_pileup(
-                bamfile,
-                chrom,
-                start,
-                end,
-                gene,
-                args.od
-            )
-        else:
-            write_gene_read_list_fetch(
-                bamfile,
-                chrom,
-                start,
-                end,
-                gene,
-                args.od
+
+    clip_thresholds = args.clip_thresholds if args.clip_thresholds else [args.clip_threshold]
+
+    for clip_threshold in clip_thresholds:
+        threshold_output_dir = args.od
+        if len(clip_thresholds) > 1:
+            threshold_output_dir = os.path.join(args.od, f"threshold_{clip_threshold}")
+
+        print(f"Creating read lists for clipping threshold {clip_threshold} in {threshold_output_dir}")
+
+        for gene, (chrom, start, end) in positions.items():
+            if args.method == "pileup":
+                write_gene_read_list_pileup(
+                    bamfile,
+                    chrom,
+                    start,
+                    end,
+                    gene,
+                    threshold_output_dir,
+                )
+            else:
+                write_gene_read_list_fetch(
+                    bamfile,
+                    chrom,
+                    start,
+                    end,
+                    gene,
+                    threshold_output_dir,
+                    clip_threshold,
                 )
 
 
@@ -140,6 +160,21 @@ if __name__ == "__main__":
         choices=["fetch", "pileup"],
         default="fetch",
         help="Method used to collect reads from BAM (default: fetch).",
+    )
+    parser.add_argument(
+        "--clip-threshold",
+        type=int,
+        default=105,
+        help="Maximum allowed clipped bases per read for fetch mode (default: 105).",
+    )
+    parser.add_argument(
+        "--clip-thresholds",
+        type=int,
+        nargs="+",
+        help=(
+            "Optional list of clipping thresholds. If provided, read lists are generated "
+            "in subfolders named threshold_<value> below --od."
+        ),
     )
     
     args = parser.parse_args()

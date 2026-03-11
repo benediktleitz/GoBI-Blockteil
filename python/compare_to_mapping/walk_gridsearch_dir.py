@@ -41,8 +41,16 @@ def _extract_grid_params(gridsearch_dir, summary_file):
     return k, offset, threshold, mode
 
 
-def _run_single_comparison(matrix_dir, read_lists_dir, compare_script):
+def _resolve_read_lists_dir(read_lists_root, threshold):
+    threshold_dir = os.path.join(read_lists_root, f"threshold_{threshold}")
+    if os.path.isdir(threshold_dir):
+        return threshold_dir
+    return read_lists_root
+
+
+def _run_single_comparison(matrix_dir, read_lists_root, compare_script, threshold):
     filter_result = os.path.join(matrix_dir, "read2gene_matrix.tsv")
+    read_lists_dir = _resolve_read_lists_dir(read_lists_root, threshold)
     cmd = [
         sys.executable,
         compare_script,
@@ -68,7 +76,7 @@ def _run_single_comparison(matrix_dir, read_lists_dir, compare_script):
         return False, matrix_dir, details.strip()
 
 
-def create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script, threads):
+def create_comparison_summaries(gridsearch_dir, read_lists_root, compare_script, threads):
     matrix_dirs = _find_matrix_dirs(gridsearch_dir)
     if not matrix_dirs:
         print("No read2gene_matrix.tsv files found in the gridsearch directory.")
@@ -79,10 +87,21 @@ def create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script, 
     total = len(matrix_dirs)
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        future_to_dir = {
-            executor.submit(_run_single_comparison, matrix_dir, read_lists_dir, compare_script): matrix_dir
-            for matrix_dir in matrix_dirs
-        }
+        future_to_dir = {}
+        for matrix_dir in matrix_dirs:
+            rel_path = os.path.relpath(matrix_dir, gridsearch_dir)
+            threshold = _extract_param(r"(?:^|/)threshold_(\d+)(?:/|$)", rel_path)
+            if threshold is None:
+                raise ValueError(f"Could not extract threshold from path: {matrix_dir}")
+
+            future = executor.submit(
+                _run_single_comparison,
+                matrix_dir,
+                read_lists_root,
+                compare_script,
+                threshold,
+            )
+            future_to_dir[future] = matrix_dir
 
         for done_idx, future in enumerate(as_completed(future_to_dir), start=1):
             success, matrix_dir, details = future.result()
@@ -165,25 +184,25 @@ def main():
     args = parser.parse_args()
 
     gridsearch_dir = os.path.abspath(args.gridsearch_dir)
-    read_lists_dir = os.path.join(gridsearch_dir, "read-lists")
+    read_lists_root = os.path.join(gridsearch_dir, "read-lists")
     compare_script = os.path.abspath(args.compare_script)
     threads = args.threads
 
     if not os.path.isdir(gridsearch_dir):
         raise FileNotFoundError(f"Gridsearch directory not found: {gridsearch_dir}")
-    if not os.path.isdir(read_lists_dir):
-        raise FileNotFoundError(f"Read-lists directory not found: {read_lists_dir}")
+    if not os.path.isdir(read_lists_root):
+        raise FileNotFoundError(f"Read-lists directory not found: {read_lists_root}")
     if not os.path.isfile(compare_script):
         raise FileNotFoundError(f"Compare script not found: {compare_script}")
     if threads <= 0:
         raise ValueError(f"--threads must be >= 1, got: {threads}")
 
     print(f"Gridsearch dir: {gridsearch_dir}")
-    print(f"Read-lists dir: {read_lists_dir}")
+    print(f"Read-lists root: {read_lists_root}")
     print(f"Compare script: {compare_script}")
     print(f"Threads: {threads}")
 
-    created, failed = create_comparison_summaries(gridsearch_dir, read_lists_dir, compare_script, threads)
+    created, failed = create_comparison_summaries(gridsearch_dir, read_lists_root, compare_script, threads)
     print(f"comparison_summary.tsv generated: {created}, failed: {failed}")
 
     combine_comparison_summaries(gridsearch_dir)
