@@ -27,47 +27,44 @@ def make_gene_to_position_dict(gtf_file, gene_list_file):
             print(f"Warning: Gene {gene_id} not found in GTF file.")
     return genes2positions
 
-def make_transcript_to_position_dict(gtf_file, gene_list_file):
+def make_rna_transcript_to_regions_dict(gtf_file, gene_list_file):
     gtf = pr.read_gtf(gtf_file).df
 
     with open(gene_list_file, 'r') as f:
         genes_of_interest = set(line.strip() for line in f)
 
-    transcript_rows = gtf[
-        (gtf.Feature == "transcript") &
+    exon_rows = gtf[
+        (gtf.Feature == "exon") &
+        (gtf.transcript_id.notna()) &
         (gtf.gene_id.isin(genes_of_interest))
     ]
 
-    transcripts2positions = {}
+    transcripts2regions = {}
 
-    for _, row in transcript_rows.iterrows():
-        transcripts2positions[row.transcript_id] = (
-            row.Chromosome,
-            row.Start,
-            row.End
+    for transcript_id, group in exon_rows.groupby("transcript_id"):
+
+        chroms = group.Chromosome.unique()
+        if len(chroms) != 1:
+            print(f"Warning: Transcript {transcript_id} has exons on multiple chromosomes; skipping.")
+            continue
+
+        chrom = chroms[0]
+        regions = sorted(
+            [(int(row.Start), int(row.End)) for _, row in group.iterrows()],
+            key=lambda x: x[0],
         )
+        transcript_start = min(start for start, _ in regions)
+        transcript_end = max(end for _, end in regions)
+        transcripts2regions[transcript_id] = (chrom, transcript_start, transcript_end, regions)
 
-    return transcripts2positions
+    return transcripts2regions
 
-def write_gene_read_list_pileup(bamfile, chrom, start, end, gene_name, output_dir):
-    output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
-    os.makedirs(output_dir, exist_ok=True)
-    read_ids = set()
-    for column in bamfile.pileup(chrom, start, end):
-        for read in column.pileups:
-            if not read.is_del and not read.is_refskip:
-                read_ids.add(normalize_read_id(read.alignment.query_name))
-
-    with open(output_file, 'w') as f:
-        for rid in sorted(read_ids):
-            f.write(f"{rid}\n")
-
-def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir, clip_threshold):
+def write_gene_read_list_fetch(bamfile, chrom, start, end, regions, gene_name, output_dir, clip_threshold):
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
     read_ids = set()
     for read in bamfile.fetch(chrom, start, end):
-        if skip_read(read, chrom, clip_threshold):
+        if skip_read(read, chrom, regions, clip_threshold):
             continue
         read_ids.add(normalize_read_id(read.query_name))
 
@@ -75,7 +72,7 @@ def write_gene_read_list_fetch(bamfile, chrom, start, end, gene_name, output_dir
         for rid in sorted(read_ids):
             f.write(f"{rid}\n")
 
-def skip_read(read, chrom, threshold=105):
+def skip_read(read, chrom, regions, threshold=105):
     if read.is_unmapped:
         return True
     if read.is_secondary:
@@ -96,6 +93,8 @@ def skip_read(read, chrom, threshold=105):
         return True
     if clipped_bases(read) > threshold:
         return True
+    if out_of_bounds(read, regions):
+        return True
     
     return False
 
@@ -108,13 +107,22 @@ def clipped_bases(read):
             clipped += length
     return clipped
 
+
+def out_of_bounds(read, regions):
+    for block_start, block_end in read.get_blocks():
+        inside_any_region = any(
+            block_start >= region_start and block_end <= region_end
+            for region_start, region_end in regions
+        )
+        if not inside_any_region:
+            return True
+    return False
+
 def main(args):
     if args.rna:
-        transcripts2positions = make_transcript_to_position_dict(args.gtf, args.gene_list)
-        positions = transcripts2positions
+        transcripts2regions = make_rna_transcript_to_regions_dict(args.gtf, args.gene_list)
     else:
         genes2positions = make_gene_to_position_dict(args.gtf, args.gene_list)
-        positions = genes2positions
     bamfile = pysam.AlignmentFile(args.mapping, "rb")
 
     clip_thresholds = args.clip_thresholds if args.clip_thresholds else [args.clip_threshold]
@@ -126,26 +134,29 @@ def main(args):
 
         print(f"Creating read lists for clipping threshold {clip_threshold} in {threshold_output_dir}")
 
-        for gene, (chrom, start, end) in positions.items():
-            if args.method == "pileup":
-                write_gene_read_list_pileup(
-                    bamfile,
-                    chrom,
-                    start,
-                    end,
-                    gene,
-                    threshold_output_dir,
-                )
-            else:
-                write_gene_read_list_fetch(
-                    bamfile,
-                    chrom,
-                    start,
-                    end,
-                    gene,
-                    threshold_output_dir,
-                    clip_threshold,
-                )
+        if args.rna:
+            iterator = (
+                (transcript_id, chrom, start, end, regions)
+                for transcript_id, (chrom, start, end, regions) in transcripts2regions.items()
+            )
+        else:
+            iterator = (
+                (gene_id, chrom, start, end, [(start, end)])
+                for gene_id, (chrom, start, end) in genes2positions.items()
+            )
+
+        for item_name, chrom, start, end, regions in iterator:
+
+            write_gene_read_list_fetch(
+                bamfile,
+                chrom,
+                start,
+                end,
+                regions,
+                item_name,
+                threshold_output_dir,
+                clip_threshold,
+            )
 
 
 if __name__ == "__main__":
@@ -155,12 +166,6 @@ if __name__ == "__main__":
     parser.add_argument("--gtf", required=True, help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
     parser.add_argument("--rna", action="store_true", help="Indicates that the transcripts should be considered, not genes.")
-    parser.add_argument(
-        "--method",
-        choices=["fetch", "pileup"],
-        default="fetch",
-        help="Method used to collect reads from BAM (default: fetch).",
-    )
     parser.add_argument(
         "--clip-threshold",
         type=int,
