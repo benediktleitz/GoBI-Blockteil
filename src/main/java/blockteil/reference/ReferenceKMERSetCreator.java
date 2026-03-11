@@ -92,8 +92,24 @@ public abstract class ReferenceKMERSetCreator {
         return genesToAdd;
     }
 
-
-
-
-
+    public void addKMERSFromSNPFile(String snpDirPath, Map<String, Gene> id2Gene) {
+        for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
+            final int geneIndex = i;
+            String snpFilePath = snpDirPath + "/" + Config.GENE_ARRAY[i] + ".txt"; //adapt this to actual file names
+            try (Stream<String> lines = Files.lines(Paths.get(snpFilePath))) {
+                lines.forEach(line -> {
+                    line = line.trim();
+                    if (line.isEmpty()) return;
+                    String[] parts = line.split("\t");
+                    String kmerStr = parts[0];
+                    long kmer = KMER.makeKMER(kmerStr, 0);
+                    Config.KMER_MAP
+                            .computeIfAbsent(kmer, k -> new IntOpenHashSet())
+                            .add(geneIndex);
+                });
+            } catch (IOException e) {
+                System.out.println("File not found: " + snpFilePath);
+            }
+        }
+    }
 }
