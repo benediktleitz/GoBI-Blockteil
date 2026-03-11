@@ -9,8 +9,8 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/plotting_data/quality/dna2/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/plotting_data/quality/dna2}"
+GENES="${GENES:-output/plotting_data/quality/rna2/gene_list.txt}"
+OUT_BASE="${OUT_BASE:-output/plotting_data/quality/rna2}"
 MAX_PARALLEL="${MAX_PARALLEL:-1}"
 
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
@@ -72,6 +72,7 @@ run_one() {
     -genes "$GENES"
     -tsv
     -counts
+    -rna
   )
 
   if [[ "$pair_mode" == "or" ]]; then
