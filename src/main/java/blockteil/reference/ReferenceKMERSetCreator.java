@@ -95,13 +95,17 @@ public abstract class ReferenceKMERSetCreator {
     public void addKMERSFromSNPFile(String snpDirPath, Map<String, Gene> id2Gene) {
         for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
             final int geneIndex = i;
-            String snpFilePath = snpDirPath + "/" + Config.GENE_ARRAY[i] + ".txt"; //adapt this to actual file names
+            String snpFilePath = snpDirPath + "/" + Config.GENE_ARRAY[i] + ".tsv";
             try (Stream<String> lines = Files.lines(Paths.get(snpFilePath))) {
-                lines.forEach(line -> {
+                lines.skip(1).forEach(line -> {
                     line = line.trim();
                     if (line.isEmpty()) return;
                     String[] parts = line.split("\t");
                     String kmerStr = parts[0];
+                    if (kmerStr.length() != Config.KMER_LENGTH) {
+                        System.out.println("Skipping invalid k-mer: " + kmerStr + " in file: " + snpFilePath);
+                        return;
+                    }
                     long kmer = KMER.makeKMER(kmerStr, 0);
                     Config.KMER_MAP
                             .computeIfAbsent(kmer, k -> new IntOpenHashSet())
