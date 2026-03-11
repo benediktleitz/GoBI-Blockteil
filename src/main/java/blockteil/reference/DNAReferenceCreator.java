@@ -37,6 +37,4 @@ public class DNAReferenceCreator extends ReferenceKMERSetCreator {
                 .sorted()
                 .toArray(String[]::new);
     }
-
-
 }

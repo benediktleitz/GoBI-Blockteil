@@ -125,6 +125,11 @@ public class CmdLineReader {
                 .hasArg()
                 .desc("path to output kmer map file (for plotting purposes)")
                 .build();
+        
+        Option snp = Option.builder("snp")
+                .hasArg()
+                .desc("path to SNP k-mer directory for additional k-mers to filter for")
+                .build();
 
 
         options.addOption(fw);
@@ -147,6 +152,7 @@ public class CmdLineReader {
         options.addOption(threads);
         options.addOption(chunksize);
         options.addOption(kmerMap);
+        options.addOption(snp);
         return options;
     }
 

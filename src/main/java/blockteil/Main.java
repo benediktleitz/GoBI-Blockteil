@@ -27,6 +27,8 @@ public class Main {
         String endStr = cmd.getOptionValue("end");
         String genes = cmd.getOptionValue("genes");
         String gtf = cmd.getOptionValue("gtf");
+        String snp = cmd.getOptionValue("snp");
+
         if (chr != null && startStr != null && endStr != null) {
             int start = 0, end = 0;
             try {
@@ -44,12 +46,20 @@ public class Main {
             Set<String> genesToAdd = creator.readGeneList(genes);
             reader.read(genesToAdd);
             creator.addKMERS(reader.id2gene);
+            if (snp != null) {
+                System.out.println("Adding SNP k-mers from " + snp);
+                creator.addKMERSFromSNPFile(snp, reader.id2gene);
+            }
         } else if (gtf != null){
             System.out.println("Warning: Now trying to add k-mers for all protein-coding genes in GTF file, this may take a while and consume a lot of memory. Consider providing a list of genes to analyze with the -genes option to reduce runtime and memory usage.");
             try {
                 Einleseroutine reader = Config.EINLESEROUTINE;
                 reader.read(null);
                 creator.addKMERS(reader.id2gene); // no genes list -> all genes in GTF file
+                if (snp != null) {
+                    System.out.println("Adding SNP k-mers from " + snp);
+                    creator.addKMERSFromSNPFile(snp, reader.id2gene);
+                }
             } catch (OutOfMemoryError e) {
                 System.err.println("Error in adding k-mers: " + e.getMessage());
                 System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
@@ -60,7 +70,7 @@ public class Main {
             System.exit(1);
         }
         System.out.println("Finished creating k-mer map, starting to filter reads...");
-        System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
+        System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + (cmd.hasOption("rna") ? " transcripts" : " genes") + " in array");
 
         String kmerMapPath = cmd.getOptionValue("kmerMap");
 
