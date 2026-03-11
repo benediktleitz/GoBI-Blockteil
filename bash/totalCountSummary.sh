@@ -1,21 +1,17 @@
 #!/usr/bin/env bash
 
-# to create the full read list, run this command in the gridsearch directory
-# cat read-lists/*.txt > FullReadList.txt
+# read lists are grouped by threshold under read-lists/threshold_<t>/
 
 gridsearchDir="output/plotting_data/quality/dna/"
 excludedGene="${1:-all}"
 
-fullReadList="${gridsearchDir}/FullReadList.txt"
-
 if [[ "$excludedGene" == "all" || -z "$excludedGene" ]]; then
     excludedGene=""
-    summaryFile="${gridsearchDir}/totalCountSummary2.tsv"
+    summaryFile="${gridsearchDir}/totalCountSummary3.tsv"
 else
-    summaryFile="${gridsearchDir}/totalCountSummary2_excluding_${excludedGene}.tsv"
+    summaryFile="${gridsearchDir}/totalCountSummary3_excluding_${excludedGene}.tsv"
 fi
 
-tmpMapped=$(mktemp)
 geneColumn=0
 
 if [[ -n "$excludedGene" ]]; then
@@ -31,9 +27,24 @@ if [[ -n "$excludedGene" ]]; then
     fi
 fi
 
-# prepare mapped read set
-cut -f1 "$fullReadList" | sort -u > "$tmpMapped"
-totalMapped=$(wc -l < "$tmpMapped")
+fullReadsDir="${gridsearchDir}/read-lists/FullReads"
+mkdir -p "$fullReadsDir"
+
+# Build one full-read file per threshold once.
+for thresholdDir in "${gridsearchDir}"/read-lists/threshold_*; do
+    [[ -d "$thresholdDir" ]] || continue
+
+    thresholdName=$(basename "$thresholdDir")
+    thresholdValue=${thresholdName#threshold_}
+    fullReadsFile="${fullReadsDir}/FullReads_threshold_${thresholdValue}.txt"
+
+    rm -f "$fullReadsFile"
+    for f in "$thresholdDir"/*.txt; do
+        [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == "FullReadList.txt" ]] && continue
+        cat "$f" >> "$fullReadsFile"
+    done
+done
 
 echo -e "mode\tk\toffset\tthreshold\ttotalFiltered\ttotalMapped\tfiltered_not_mapped\tmapped_not_filtered" > "$summaryFile"
 
@@ -45,6 +56,16 @@ for kdir in ${gridsearchDir}/k_*; do
 
         for tdir in ${odir}/threshold_*; do
             threshold=$(basename "$tdir" | cut -d_ -f2)
+
+            thresholdFullReads="${fullReadsDir}/FullReads_threshold_${threshold}.txt"
+            if [[ ! -f "$thresholdFullReads" ]]; then
+                echo "Warning: missing full reads file for threshold ${threshold}: ${thresholdFullReads}" >&2
+                continue
+            fi
+
+            tmpMapped=$(mktemp)
+            cut -f1 "$thresholdFullReads" | sort -u > "$tmpMapped"
+            totalMapped=$(wc -l < "$tmpMapped")
 
             for mdir in ${tdir}/mode_*; do
                 mode=$(basename "$mdir" | cut -d_ -f2)
@@ -73,8 +94,8 @@ for kdir in ${gridsearchDir}/k_*; do
                     rm "$tmpFiltered"
                 fi
             done
+
+            rm "$tmpMapped"
         done
     done
 done
-
-rm "$tmpMapped"

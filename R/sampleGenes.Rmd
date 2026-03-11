@@ -1,0 +1,21 @@
+---
+title: "sampleGenes"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(scales)
+source("functions.R")
+```
+
+```{r}
+genes = read_tsv("../output/plotting_data/quality/dna/gene_list.txt", col_names = "gene_id")
+
+gtf <- rtracklayer::import('../data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz')
+
+genes_gtf = as.data.frame(gtf) %>% filter(type == "gene") %>% inner_join(genes)
+
+genes_gtf %>% group_by(seqnames) %>% summarise(nGenes = n())
+```
+

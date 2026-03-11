@@ -89,3 +89,25 @@ plotMetric <- function(modeString, metric, func,
   }
   return(p)
 }
+
+readVerbose <- function(path){
+  tmp = read_delim(path, delim = ": ", 
+                   col_names = c("cmd", "value")) %>% 
+    mutate(cmd = str_replace_all(cmd, "([\n\t])", ""))
+  return(tmp)
+}
+
+parse_elapsed <- function(x) {
+  parts <- strsplit(x, ":")
+  sapply(parts, function(p) {
+    mins <- as.numeric(p[1])
+    secs <- as.numeric(p[2])
+    mins * 60 + secs
+  })
+}
+
+getMaxResSize <- function(verboseDF){
+  return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
+}
+
+

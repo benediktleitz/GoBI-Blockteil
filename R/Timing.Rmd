@@ -28,42 +28,24 @@ extType = ".jpg"
 ```
 
 ```{r}
-readVerbose <- function(path){
-  tmp = read_delim(path, delim = ": ", 
-                    col_names = c("cmd", "value")) %>% 
-  mutate(cmd = str_replace_all(cmd, "([\n\t])", ""))
-  return(tmp)
-}
 
-parse_elapsed <- function(x) {
-  parts <- strsplit(x, ":")
-  sapply(parts, function(p) {
-    mins <- as.numeric(p[1])
-    secs <- as.numeric(p[2])
-    mins * 60 + secs
-  })
-}
-
-getMaxResSize <- function(verboseDF){
-  return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
-}
 
 readTiming <- function(moleculeStr){
   df = read_tsv(paste0(gridsearchDir, moleculeStr, "/time_summary.tsv"),
-                         col_types = cols(elapsed = col_character())) %>% 
-  mutate(mode = pair_mode,
-         molecule = moleculeStr,
-         elapsed_sec = parse_elapsed(elapsed),
-         max_rss_b = max_rss_kb * 1024) %>% 
-  select(-pair_mode)
+                col_types = cols(elapsed = col_character())) %>% 
+    mutate(mode = pair_mode,
+           molecule = moleculeStr,
+           elapsed_sec = parse_elapsed(elapsed),
+           max_rss_b = as.numeric(max_rss_kb) * 1024) %>% 
+    select(-pair_mode)
+  
   return(df)
 }
-
-
 ```
 
 
 ```{r}
+
 timing_dna = readTiming("dna")
 timing_rna = readTiming("rna")
 

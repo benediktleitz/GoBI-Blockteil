@@ -1,0 +1,80 @@
+---
+title: "ChunkAnalysis"
+output: html_document
+date: "2026-03-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+source("functions.R")
+
+```
+
+```{r}
+
+gridsearchDir = "../output/chunksize_analysis/"
+plotsDir = paste0(gridsearchDir, "plots/")
+extType = ".jpg"
+```
+
+```{r}
+readTiming <- function(){
+  df = read_tsv(paste0(gridsearchDir, "time_summary.tsv"),
+                col_types = cols(elapsed = col_character())) %>% 
+    mutate(mode = pair_mode,
+           elapsed_sec = parse_elapsed(elapsed),
+           max_rss_b = as.numeric(max_rss_kb) * 1024) %>% 
+    select(-pair_mode)
+  
+  return(df)
+}
+```
+
+
+
+
+```{r}
+chunkTiming = readTiming() 
+
+readcounts = read_tsv(file = "../output/read_counts.tsv") %>% 
+  mutate(sample = str_split_i(filename, "_", 1)) %>% 
+  group_by(sample) %>% 
+  summarise(count = max(read_count))
+
+summarisedTiming = chunkTiming %>%
+  inner_join(readcounts, by = join_by(sample)) %>%
+  group_by(sample, chunksize) %>% 
+  summarise(meanSecondsElapsed = mean(elapsed_sec), 
+            meanReadsPerSec = mean(count / elapsed_sec)) %>%
+  ungroup() %>%
+  mutate(meanReadsPerMin = 60 * meanReadsPerSec,
+         sample = str_split_i(sample, "-", 1))
+```
+
+```{r}
+summarisedTiming %>% 
+  ggplot(aes(x = chunksize, y = meanReadsPerMin, color = factor(sample), group = sample)) +
+  geom_line() +
+  themeForSaving() +
+  theme(legend.position = "bottom", legend.justification = "center") +
+  scale_x_continuous(label = scales::label_number(scale_cut = scales::cut_short_scale()),
+                     breaks = unique(summarisedTiming$chunksize)) +
+  scale_y_continuous(label = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(col = "sample",
+       y = "Mean Reads Per Min",
+       x = "Chunksize",
+       title = "Mean RPM for different chunksizes",
+       subtitle = "T = 105 & K = 15") +
+  geom_hline(yintercept = 10000000, linetype = "dashed")
+```
+
+
+```{r}
+summarisedTiming
+```
+

@@ -9,8 +9,8 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/plotting_data/quality/dna/gene_list.txt}"
-OUT_DIR="${OUT_DIR:-KMER}"
+GENES="${GENES:-output/plotting_data/quality/rna/gene_list.txt}"
+OUT_DIR="${OUT_DIR:-output/plotting_data/quality/rna/KMER}"
 THRESHOLD="${THRESHOLD:-105}"
 
 declare -a K_VALUES=()
@@ -35,7 +35,8 @@ for k in "${K_VALUES[@]}"; do
     -od "$OUT_DIR" \
     -gtf "$GTF" \
     -genes "$GENES" \
-    -kmerMap "$out_file"
+    -kmerMap "$out_file" \
+    -rna
 done
 
 echo "Done."

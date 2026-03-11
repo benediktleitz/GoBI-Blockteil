@@ -20,7 +20,8 @@ source("functions.R")
 
 ```{r}
 numReads = 27000000
-kmerDir = "../output/plotting_data/quality/dna/KMER/"
+gridsearchDir = "../output/plotting_data/quality/rna/"
+kmerDir = paste0(gridsearchDir, "KMER/")
 plotsDir = paste0(gridsearchDir, "plots/")
 extType = ".jpg"
 
@@ -28,12 +29,111 @@ extType = ".jpg"
 ```
 
 ```{r}
-k2Map =  {}
+
+k2Plot = {}
+
+k2Map <- list()
+
+for (k in seq(from = 12, to = 30, by = 5)) {
+  kmer <- read_tsv(paste0(kmerDir, "k_", k, ".txt")) %>%
+    mutate(geneSetSize = str_count(gene, ","))
+  
+  leastUniqueKmers = rbind(leastUniqueKmers, kmer %>% arrange(desc(geneSetSize)) %>% head(10) %>% mutate(k = k)) 
+
+  k2Map[[as.character(k)]] <- kmer
+}
 
 for(k in seq(from = 12, to = 30, by = 5)){
-  kmer = read_tsv(paste0(kmerDir, "k_", k,".txt")) %>% mutate(geneSetSize = str_count(gene, ","))
-  k2Map[k] = list(kmer)
+  kmer = read_tsv(paste0(kmerDir, "k_", k,".txt")) %>% mutate(geneSetSize = str_count(gene, ",")) 
+  k2Map[k] = kmer
+
+  p = kmer %>% ggplot(aes(x = geneSetSize)) +
+  geom_histogram() +
+  scale_y_log10(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  themeForSaving() +
+  labs(title = "How many Genes Kmers are mapped to",
+       subtitle = paste("K =", k))
+  print(p)
+  k2Plot[k] = 
 }
+
+
+
+
+
+
+
+```
+
+```{r}
+tmpKMap = as.data.frame(k2Map[12])
+
+tmpKMap %>% arrange((geneSetSize))
+```
+
+```{r}
+for (k in names(k2Map)) {
+  
+  df = k2Map[[k]]
+  p = df %>% ggplot(aes(x = geneSetSize)) +
+  geom_histogram() +
+  scale_y_continuous(
+    trans = "log10",
+    labels = scales::label_number(scale_cut = scales::cut_short_scale())
+  ) +
+  themeForSaving() +
+  labs(title = "How many Genes Kmers are mapped to",
+       subtitle = paste("K =", k))
+  print(p)
+}
+
+
+
+```
+
+```{r}
+counts_long <- map_dfr(seq(from = 12, to = 30, by = 2), function(k) {
+  read_tsv(paste0(kmerDir, "k_", k, ".txt"), show_col_types = FALSE) %>%
+    mutate(
+      geneSetSize = str_count(gene, ","),
+      k = k
+    )
+}) %>%
+  count(k, geneSetSize) %>%
+  pivot_wider(
+    names_from = k,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  pivot_longer(-geneSetSize, names_to = "k", values_to = "count") %>%
+  group_by(k) %>%
+  mutate(total_kmers = sum(count)) %>%
+  ungroup()
+
+head(counts_long)
+
+
+p = counts_long %>% 
+ggplot(aes(x = geneSetSize, y = count, color = k)) +
+  geom_line() +
+  scale_y_continuous(
+    transform = "log10",
+    breaks = 10^(0:6),
+    labels = scales::label_number(scale_cut = scales::cut_short_scale())
+    ) +
+  themeForSaving() +
+  labs(
+    title = "Distribution of Transcript Mapping per k-mer",
+    x = "Number of transcripts a k-mer maps to",
+    y = "Number of k-mers"
+  )+
+  theme(legend.position = "right", legend.justification ="center") +
+  coord_cartesian(ylim = c(1,1000000))
+
+savePlotReport(paste0(gridsearchDir, "kmerdist", extType), p)
+
+
+
 
 ```
 

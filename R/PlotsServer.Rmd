@@ -23,10 +23,12 @@ allGenesDir = "../output/all_gene_analysis/"
 plotsDir = paste0(gridsearchDir, "plots/")
 extType = ".jpg"
 long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) %>% 
-  filter(gene != "ENSSSCG00000044511" & mapping_reads != 0) 
+ filter(mapping_reads != 0) 
 long_summary = long_summary %>% mutate(not_recall = matched/mapping_reads, not_precision = matched/filtered_reads, percentReads = filtered_reads/numReads)
 
 long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_reads))
+
+long_summary %>% filter(gene != "ENSSSCG00000018081" & threshold == 90 & mode == "and") %>% summarise(max(filtered_reads))
 ```
 
 
@@ -37,7 +39,7 @@ long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_rea
 
 
 ```{r}
-plotMetric("or", not_recall, min)
+plotMetric("or", not_recall, mean)
 plotMetric("or", not_precision, mean,
            df = long_summary %>% filter(filtered_reads > 0))
 
@@ -135,9 +137,11 @@ plot_readCountByThreshold(105, "both")
 ```
 
 ```{r}
+
+long_filtered = long_summary %>% filter(gene != "ENSSSCG00000018081")
 plot_readCountBoxByThreshold <- function(t_val, modeString) {
 
-  plot_data <- long_summary %>% 
+  plot_data <- long_filtered %>% 
     filter(threshold == t_val)
 
   if (modeString != "both") {
@@ -208,17 +212,20 @@ plot_readCountBoxByThreshold <- function(t_val, modeString) {
 saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
   for(t in unique(long_summary$threshold)) {
   for(mode in modes){
+    if(mode == "or" & t == 75) next
     p = plotFunc(t_val = t, modeString = mode)
-    pathname=paste0(plotsDir, "ReadCount/Box/ReadCountByThreshold_T", t, "_", mode, extType)
+    pathname=paste0(plotsDir, "ReadCount/Box/ReadCountByThreshold_T", t, "_", mode,"_filtered", extType)
     savePlotReport(pathname, p)
     print(p)
   }
 }
 }
 
-saveReadCounts(modes = c("both"), plotFunc = plot_readCountBoxByThreshold)
+saveReadCounts(plotFunc = plot_readCountBoxByThreshold)
 
+plot_readCountBoxByThreshold(75, "and")
 
+long_summary %>% arrange(desc(mapping_reads))
 
 ```
 
@@ -285,7 +292,7 @@ readcounts %>% write_tsv(file = "../output/read_counts.tsv")
 
 ```{r}
 readTotalSummary <- function(ext = ""){
-  df = read_tsv(paste0(gridsearchDir, "totalCountSummary2", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
+  df = read_tsv(paste0(gridsearchDir, "totalCountSummary3", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
                                                                                   matched = totalFiltered - filtered_not_mapped)
   return(df)
 }
@@ -297,7 +304,9 @@ totalCounts = readTotalSummary()
 totalCounts_no18 = readTotalSummary("_excluding_ENSSSCG00000018081") %>% mutate(totalMapped = totalMapped - getMappingReads("ENSSSCG00000018081"))
 
 
+long_summary %>% filter(gene == "ENSSSCG00000018081")
 
+totalCounts %>% anti_join(totalCounts_no18)
 ```
 
 ```{r}
@@ -325,24 +334,26 @@ barPlotMappingRate <- function(val, metric, xFactor, df = totalCounts){
 
 #barPlotMappingRate(12, k, threshold)
 
-saveMappingRates <- function(df = totalCounts, caption = ""){
+saveMappingRates <- function(df = totalCounts, captionStr = ""){
   for(k_val in unique(df$k)){
-    p = barPlotMappingRate(k_val, k, threshold, df) + labs(caption = caption)
-    savePlotReport(paste0(plotsDir, "bars/K/mappingrate_K", k_val, caption ,extType), p)
+    p = barPlotMappingRate(k_val, k, threshold, df) + labs(caption = captionStr)
+    savePlotReport(paste0(plotsDir, "bars2/K/mappingrate_K", k_val, captionStr ,extType), p)
   }
   for(t_val in unique(df$threshold)){
-    p = barPlotMappingRate(t_val, threshold, k, df) + labs(caption = caption) 
-    savePlotReport(paste0(plotsDir, "bars/T/mappingrate_T", t_val, caption ,extType), p)
+    p = barPlotMappingRate(t_val, threshold, k, df) + labs(caption = captionStr) 
+    savePlotReport(paste0(plotsDir, "bars2/T/mappingrate_T", t_val, captionStr ,extType), p)
 
     
   }
 }
+
+long_summary %>% filter(gene == "ENSSSCT00000019676")
 ```
 
 
 
 ```{r}
-saveMappingRates(totalCounts_no18, "No_ENSSSCG00000018081")
+saveMappingRates(totalCounts_no18, captionStr = "No_ENSSSCT00000019676")
 ```
 
 ```{r}
@@ -363,23 +374,19 @@ plotScatterTradeOff <- function(modeString){
   themeForSaving() +
   theme(legend.position = "right", legend.justification = "center") +
   labs(title = "Mappingrate vs Filterrate tradeoff",
-       subtitle = paste("Mode:", modeString, "excluding ENSSSCG00000018081")) +
-  coord_cartesian(xlim = c(0,1))
+       subtitle = paste("Mode:", modeString)) +
+  coord_cartesian(xlim = c(0,1), ylim = c(0,0.07))
   
   return(p)
 }
 
 for(mode in c("or", "and")){
   p = plotScatterTradeOff(mode)
-  savePlotReport(paste0(plotsDir, "scatter2/mapping_filter_", mode, "no_18", extType), p)
-  #print(p)
+  savePlotReport(paste0(plotsDir, "scatter3/mapping_filter_", mode, "_no18",extType), p)
+  print(p)
 }
 
 p = plotScatterTradeOff("or")
-
-
-ggsave(paste0(gridsearchDir, "precision_recall_legend_bottom", extType), l)
-plotScatterTradeOff("and")
 ```
 
 ```{r}
