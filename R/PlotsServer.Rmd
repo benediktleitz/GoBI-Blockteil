@@ -211,11 +211,13 @@ saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
     p = plotFunc(t_val = t, modeString = mode)
     pathname=paste0(plotsDir, "ReadCount/Box/ReadCountByThreshold_T", t, "_", mode, extType)
     savePlotReport(pathname, p)
+    print(p)
   }
 }
 }
 
 saveReadCounts(modes = c("both"), plotFunc = plot_readCountBoxByThreshold)
+
 
 
 ```
@@ -255,9 +257,9 @@ plotCountDistribution <- function(df, colour, typeString){
 
 ```{r}
 p = plotCountDistribution(fullGenes, "deepskyblue4", "Gene")
-savePlotReport(paste0(plotsDir, "geneCounts_cont", extType), p)
+savePlotReport(paste0(plotsDir, "geneCounts_cont2", extType), p)
 p = plotCountDistribution(fullRNA, "deepskyblue3", "Transcript")
-savePlotReport(paste0(plotsDir, "TranscriptCounts_cont", extType), p)
+savePlotReport(paste0(plotsDir, "TranscriptCounts_cont2", extType), p)
 
 ```
 
@@ -282,8 +284,8 @@ readcounts %>% write_tsv(file = "../output/read_counts.tsv")
 ### scatter plot tradeoff (filter vs matched)
 
 ```{r}
-readTotalSummary <- function(ext){
-  df = read_tsv(paste0(gridsearchDir, "totalCountSummary", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
+readTotalSummary <- function(ext = ""){
+  df = read_tsv(paste0(gridsearchDir, "totalCountSummary2", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
                                                                                   matched = totalFiltered - filtered_not_mapped)
   return(df)
 }
@@ -352,7 +354,7 @@ saveMappingRates()
 
 
 plotScatterTradeOff <- function(modeString){
-  p = totalCounts %>%  filter(mode == modeString) %>% 
+  p = totalCounts_no18 %>%  filter(mode == modeString) %>% 
   mutate(mappingRate = matched/totalMapped,
          filteredRate = totalFiltered/nFastqReads) %>% 
   ggplot(aes(x = mappingRate, y = filteredRate)) +
@@ -361,18 +363,22 @@ plotScatterTradeOff <- function(modeString){
   themeForSaving() +
   theme(legend.position = "right", legend.justification = "center") +
   labs(title = "Mappingrate vs Filterrate tradeoff",
-       subtitle = paste("Mode:", modeString)) +
-  coord_cartesian(xlim = c(0,1), ylim = c(0, 0.07))
+       subtitle = paste("Mode:", modeString, "excluding ENSSSCG00000018081")) +
+  coord_cartesian(xlim = c(0,1))
   
   return(p)
 }
 
 for(mode in c("or", "and")){
   p = plotScatterTradeOff(mode)
-  savePlotReport(paste0(plotsDir, "scatter/mapping_filter_", mode, extType), p)
+  savePlotReport(paste0(plotsDir, "scatter2/mapping_filter_", mode, "no_18", extType), p)
+  #print(p)
 }
 
 p = plotScatterTradeOff("or")
+
+
+ggsave(paste0(gridsearchDir, "precision_recall_legend_bottom", extType), l)
 plotScatterTradeOff("and")
 ```
 

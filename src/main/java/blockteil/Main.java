@@ -62,6 +62,13 @@ public class Main {
         System.out.println("Finished creating k-mer map, starting to filter reads...");
         System.out.println(Config.KMER_MAP.size() + " unique k-mers in map, " + Config.GENE_ARRAY.length + " genes in array");
 
+        String kmerMapPath = cmd.getOptionValue("kmerMap");
+
+        if (kmerMapPath != null) {
+            System.out.println("Writing k-mer map to " + kmerMapPath);
+            Writer.writeKmerMap(kmerMapPath);
+            System.exit(0);
+        }
         
         String fw = cmd.getOptionValue("fw");
         String rw = cmd.getOptionValue("rw");

@@ -1,6 +1,8 @@
 package blockteil.readprocessing;
 
 import blockteil.Config;
+import blockteil.KMER;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -74,6 +76,25 @@ public class Writer {
             bw.write("gene\tcount\n");
             for (int i = 0; i < Config.GENE_ARRAY.length; i++) {
                 bw.write(Config.GENE_ARRAY[i] + "\t" + Config.COUNT_ARRAY.get(i) + "\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeKmerMap(String outputFile) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outputFile))) {
+            bw.write("kmer\tgene\n");
+            IntOpenHashSet geneIndices;
+            for (long kmerLong : Config.KMER_MAP.keySet()) {
+                bw.write(KMER.decodeKmer(kmerLong));
+                bw.write("\t");
+                geneIndices = Config.KMER_MAP.get(kmerLong);
+                for (int geneIndex : geneIndices) {
+                    String geneName = Config.GENE_ARRAY[geneIndex];
+                    bw.write(geneName + ",");
+                }
+                bw.newLine();
             }
         } catch (IOException e) {
             e.printStackTrace();

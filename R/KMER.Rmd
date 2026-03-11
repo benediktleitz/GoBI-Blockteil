@@ -1,0 +1,39 @@
+---
+title: "KMER"
+output: html_document
+date: "2026-03-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(scales)
+```
+
+```{r}
+source("functions.R")
+```
+
+
+```{r}
+numReads = 27000000
+kmerDir = "../output/plotting_data/quality/dna/KMER/"
+plotsDir = paste0(gridsearchDir, "plots/")
+extType = ".jpg"
+
+
+```
+
+```{r}
+k2Map =  {}
+
+for(k in seq(from = 12, to = 30, by = 5)){
+  kmer = read_tsv(paste0(kmerDir, "k_", k,".txt")) %>% mutate(geneSetSize = str_count(gene, ","))
+  k2Map[k] = list(kmer)
+}
+
+```
+
