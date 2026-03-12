@@ -9,7 +9,7 @@ import pandas as pd
 
 
 # Temporary switch: set to None to process all modes again.
-TARGET_MODE = "and"
+TARGET_MODE = None
 
 
 def _extract_mode_from_rel_path(rel_path):
