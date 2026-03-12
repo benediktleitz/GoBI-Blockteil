@@ -10,7 +10,7 @@ RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
 GENES="${GENES:-output/plotting_data/snp/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/plotting_data/snp/dna}"
+OUT_BASE="${OUT_BASE:-output/plotting_data/snp/rna}"
 MAX_PARALLEL="1"
 
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
@@ -70,6 +70,7 @@ run_one() {
     -tsv
     -counts
     -snp output/kmers_pig
+    -rna
   )
 
   if [[ "$pair_mode" == "or" ]]; then
@@ -157,4 +158,4 @@ write_global_summary
 echo "Grid search finished. Results are in: $OUT_BASE"
 echo "Executed runs: $executed_runs"
 
-python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir "$OUT_BASE" --threads 1
+python/venv/bin/python3.11 python/compare_to_mapping/walk_gridsearch_dir.py --gridsearch-dir "$OUT_BASE" --threads 2
