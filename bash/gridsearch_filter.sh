@@ -9,16 +9,13 @@ FW="${FW:-data/pig-data-rnaseq/H5-12939-T2_R1_001.fastq.gz}"
 RW="${RW:-data/pig-data-rnaseq/H5-12939-T2_R3_001.fastq.gz}"
 FASTA="${FASTA:-data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz}"
 GTF="${GTF:-data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz}"
-GENES="${GENES:-output/plotting_data/quality/rna2/gene_list.txt}"
-OUT_BASE="${OUT_BASE:-output/plotting_data/quality/rna2}"
-MAX_PARALLEL="${MAX_PARALLEL:-1}"
+GENES="${GENES:-output/plotting_data/snp/gene_list.txt}"
+OUT_BASE="${OUT_BASE:-output/plotting_data/snp/rna}"
+MAX_PARALLEL="1"
 
 TIME_SUMMARY="$OUT_BASE/time_summary.tsv"
 
-declare -a K_VALUES=()
-for k in $(seq 21 1 30); do
-  K_VALUES+=("$k")
-done
+declare -a K_VALUES=(15)
 
 declare -a THRESHOLD_VALUES=(75 90 105 120)
 declare -a PAIR_MODES=(and or)
@@ -72,6 +69,7 @@ run_one() {
     -genes "$GENES"
     -tsv
     -counts
+    -snp output/kmers_pig
     -rna
   )
 
@@ -143,8 +141,9 @@ for k in "${K_VALUES[@]}"; do
       out_dir="$OUT_BASE/k_${k}/offset_${offset}/threshold_${threshold}/mode_${pair_mode}"
       mkdir -p "$out_dir"
 
-      echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold pair_mode=$pair_mode"
       throttle_jobs pids
+
+      echo "[$run_idx/$total_runs] EXECUTE k=$k offset=$offset threshold=$threshold pair_mode=$pair_mode"
       run_one "$k" "$offset" "$threshold" "$pair_mode" "$out_dir" &
       pids+=("$!")
       executed_runs=$((executed_runs + 1))
