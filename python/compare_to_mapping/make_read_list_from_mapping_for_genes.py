@@ -59,14 +59,47 @@ def make_rna_transcript_to_regions_dict(gtf_file, gene_list_file):
 
     return transcripts2regions
 
-def write_gene_read_list_fetch(bamfile, chrom, start, end, regions, gene_name, output_dir, clip_threshold):
+def write_gene_read_list_fetch(
+    bamfile,
+    chrom,
+    start,
+    end,
+    regions,
+    gene_name,
+    output_dir,
+    clip_threshold,
+    pair_mode,
+):
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{gene_name}_reads.txt")
-    read_ids = set()
+    pair_state = {}
+
     for read in bamfile.fetch(chrom, start, end):
-        if skip_read(read, chrom, regions, clip_threshold):
-            continue
-        read_ids.add(normalize_read_id(read.query_name))
+        read_id = normalize_read_id(read.query_name)
+        passed = not skip_read(read, chrom, regions, clip_threshold)
+
+        if read_id not in pair_state:
+            pair_state[read_id] = {
+                "pass_read1": False,
+                "pass_read2": False,
+            }
+
+        state = pair_state[read_id]
+
+        if read.is_paired:
+            if read.is_read1:
+                state["pass_read1"] = state["pass_read1"] or passed
+            elif read.is_read2:
+                state["pass_read2"] = state["pass_read2"] or passed
+
+    read_ids = set()
+    for read_id, state in pair_state.items():
+        if pair_mode == "and":
+            if state["pass_read1"] and state["pass_read2"]:
+                read_ids.add(read_id)
+        else:
+            if state["pass_read1"] or state["pass_read2"]:
+                read_ids.add(read_id)
 
     with open(output_file, 'w') as f:
         for rid in sorted(read_ids):
@@ -126,44 +159,49 @@ def main(args):
     bamfile = pysam.AlignmentFile(args.mapping, "rb")
 
     clip_thresholds = args.clip_thresholds if args.clip_thresholds else [args.clip_threshold]
+    pair_modes = ["and", "or"]
 
     for clip_threshold in clip_thresholds:
-        threshold_output_dir = args.od
-        if len(clip_thresholds) > 1:
-            threshold_output_dir = os.path.join(args.od, f"threshold_{clip_threshold}")
+        threshold_output_dir = os.path.join(args.od, f"threshold_{clip_threshold}")
 
-        print(f"Creating read lists for clipping threshold {clip_threshold} in {threshold_output_dir}")
-
-        if args.rna:
-            iterator = (
-                (transcript_id, chrom, start, end, regions)
-                for transcript_id, (chrom, start, end, regions) in transcripts2regions.items()
-            )
-        else:
-            iterator = (
-                (gene_id, chrom, start, end, [(start, end)])
-                for gene_id, (chrom, start, end) in genes2positions.items()
+        for pair_mode in pair_modes:
+            mode_output_dir = os.path.join(threshold_output_dir, pair_mode)
+            print(
+                f"Creating read lists for clipping threshold {clip_threshold}, "
+                f"pair mode {pair_mode} in {mode_output_dir}"
             )
 
-        for item_name, chrom, start, end, regions in iterator:
+            if args.rna:
+                iterator = (
+                    (transcript_id, chrom, start, end, regions)
+                    for transcript_id, (chrom, start, end, regions) in transcripts2regions.items()
+                )
+            else:
+                iterator = (
+                    (gene_id, chrom, start, end, [(start, end)])
+                    for gene_id, (chrom, start, end) in genes2positions.items()
+                )
 
-            write_gene_read_list_fetch(
-                bamfile,
-                chrom,
-                start,
-                end,
-                regions,
-                item_name,
-                threshold_output_dir,
-                clip_threshold,
-            )
+            for item_name, chrom, start, end, regions in iterator:
+
+                write_gene_read_list_fetch(
+                    bamfile,
+                    chrom,
+                    start,
+                    end,
+                    regions,
+                    item_name,
+                    mode_output_dir,
+                    clip_threshold,
+                    pair_mode,
+                )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a read list from a mapping file for specific genes.")
-    parser.add_argument("--mapping", required=True, help="Path to the mapping file (BAM).")
+    parser.add_argument("--mapping", default="data/pig-data-rnaseq/mapped/minimap2/H5-12939-T2.sorted.bam", help="Path to the mapping file (BAM).")
     parser.add_argument("--gene-list", required=True, help="Path to the file containing the list of genes.")
-    parser.add_argument("--gtf", required=True, help="Path to the GTF file containing gene annotations." )
+    parser.add_argument("--gtf", default="data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz", help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
     parser.add_argument("--rna", action="store_true", help="Indicates that the transcripts should be considered, not genes.")
     parser.add_argument(

@@ -8,10 +8,23 @@ import sys
 import pandas as pd
 
 
+# Temporary switch: set to None to process all modes again.
+TARGET_MODE = "and"
+
+
+def _extract_mode_from_rel_path(rel_path):
+    mode_match = re.search(r"(?:^|/)mode_(or|and)(?:/|$)", rel_path)
+    return mode_match.group(1) if mode_match else None
+
+
 def _find_matrix_dirs(gridsearch_dir):
     matrix_dirs = []
     for root, _, files in os.walk(gridsearch_dir):
         if "read2gene_matrix.tsv" in files:
+            rel_path = os.path.relpath(root, gridsearch_dir)
+            mode = _extract_mode_from_rel_path(rel_path)
+            if TARGET_MODE is not None and mode != TARGET_MODE:
+                continue
             matrix_dirs.append(root)
     return sorted(matrix_dirs)
 
@@ -20,6 +33,10 @@ def _find_summary_files(gridsearch_dir):
     summary_files = []
     for root, _, files in os.walk(gridsearch_dir):
         if "comparison_summary.tsv" in files:
+            rel_path = os.path.relpath(root, gridsearch_dir)
+            mode = _extract_mode_from_rel_path(rel_path)
+            if TARGET_MODE is not None and mode != TARGET_MODE:
+                continue
             summary_files.append(os.path.join(root, "comparison_summary.tsv"))
     return sorted(summary_files)
 
@@ -36,21 +53,25 @@ def _extract_grid_params(gridsearch_dir, summary_file):
     k = _extract_param(r"(?:^|/)k_(\d+)(?:/|$)", rel_path)
     offset = _extract_param(r"(?:^|/)offset_(\d+)(?:/|$)", rel_path)
     threshold = _extract_param(r"(?:^|/)threshold_(\d+)(?:/|$)", rel_path)
-    mode_match = re.search(r"(?:^|/)mode_(or|and)(?:/|$)", rel_path)
-    mode = mode_match.group(1) if mode_match else None
+    mode = _extract_mode_from_rel_path(rel_path)
     return k, offset, threshold, mode
 
 
-def _resolve_read_lists_dir(read_lists_root, threshold):
+def _resolve_read_lists_dir(read_lists_root, threshold, mode):
+    if mode:
+        threshold_mode_dir = os.path.join(read_lists_root, f"threshold_{threshold}", mode)
+        if os.path.isdir(threshold_mode_dir):
+            return threshold_mode_dir
+
     threshold_dir = os.path.join(read_lists_root, f"threshold_{threshold}")
     if os.path.isdir(threshold_dir):
         return threshold_dir
     return read_lists_root
 
 
-def _run_single_comparison(matrix_dir, read_lists_root, compare_script, threshold):
+def _run_single_comparison(matrix_dir, read_lists_root, compare_script, threshold, mode):
     filter_result = os.path.join(matrix_dir, "read2gene_matrix.tsv")
-    read_lists_dir = _resolve_read_lists_dir(read_lists_root, threshold)
+    read_lists_dir = _resolve_read_lists_dir(read_lists_root, threshold, mode)
     cmd = [
         sys.executable,
         compare_script,
@@ -91,6 +112,7 @@ def create_comparison_summaries(gridsearch_dir, read_lists_root, compare_script,
         for matrix_dir in matrix_dirs:
             rel_path = os.path.relpath(matrix_dir, gridsearch_dir)
             threshold = _extract_param(r"(?:^|/)threshold_(\d+)(?:/|$)", rel_path)
+            mode = _extract_mode_from_rel_path(rel_path)
             if threshold is None:
                 raise ValueError(f"Could not extract threshold from path: {matrix_dir}")
 
@@ -100,6 +122,7 @@ def create_comparison_summaries(gridsearch_dir, read_lists_root, compare_script,
                 read_lists_root,
                 compare_script,
                 threshold,
+                mode,
             )
             future_to_dir[future] = matrix_dir
 
