@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-gene_id="ENSSSCG00000011316"
+gene_id="ENSSSCG00000035362"
 bam_file="data/pig-data-rnaseq/mapped/minimap2/H5-12939-T2.sorted.bam"
 gtf_file="data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz"
 ref_fasta="data/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz"

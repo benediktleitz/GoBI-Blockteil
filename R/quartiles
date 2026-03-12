@@ -1,0 +1,48 @@
+RNA
+# A tibble: 8 × 6
+  mode  threshold    Q1 Median    Q3 variable    
+  <chr>     <dbl> <dbl>  <dbl> <dbl> <chr>       
+1 and          75     0      0   2   not_filtered
+2 and          90     0      1   6   not_filtered
+3 and         105     0      2  10.5 not_filtered
+4 and         120     0      5  23.2 not_filtered
+5 or           75     0      0   0   not_filtered
+6 or           90     0      0   1   not_filtered
+7 or          105     0      0   3   not_filtered
+8 or          120     0      1   7   not_filtered
+# A tibble: 8 × 6
+  mode  threshold    Q1 Median    Q3 variable      
+  <chr>     <dbl> <dbl>  <dbl> <dbl> <chr>         
+1 and          75  8.25   326  1865. filtered_reads
+2 and          90  6      292  1817. filtered_reads
+3 and         105  5      262. 1630. filtered_reads
+4 and         120  3.25   230. 1569  filtered_reads
+5 or           75 23.2    505  2999. filtered_reads
+6 or           90 16      484. 2950. filtered_reads
+7 or          105 12.5    468. 2276. filtered_reads
+8 or          120 12.5    436. 2148. filtered_reads
+
+
+DNA
+# A tibble: 8 × 6
+  mode  threshold    Q1 Median    Q3 variable    
+  <chr>     <dbl> <dbl>  <dbl> <dbl> <chr>       
+1 and          75     0    0     8   not_filtered
+2 and          90     0    2    23.2 not_filtered
+3 and         105     0    4    36.8 not_filtered
+4 and         120     0   10.5  71   not_filtered
+5 or           75     0    0     0   not_filtered
+6 or           90     0    0     2   not_filtered
+7 or          105     0    0     4   not_filtered
+8 or          120     0    1    10.5 not_filtered
+# A tibble: 8 × 6
+  mode  threshold    Q1 Median      Q3 variable      
+  <chr>     <dbl> <dbl>  <dbl>   <dbl> <chr>         
+1 and          75 1828.  6868.  19090. filtered_reads
+2 and          90 1410.  5954.  10838. filtered_reads
+3 and         105  876.  4978.   7324. filtered_reads
+4 and         120  310   3976.   5046. filtered_reads
+5 or           75 8700. 40436. 178059  filtered_reads
+6 or           90 4044. 19614.  99019. filtered_reads
+7 or          105 2540. 12843   51748. filtered_reads
+8 or          120 1286. 10400   26241. filtered_reads

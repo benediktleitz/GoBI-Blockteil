@@ -2,7 +2,7 @@
 
 # read lists are grouped by threshold under read-lists/threshold_<t>/
 
-gridsearchDir="output/plotting_data/quality/dna/"
+gridsearchDir="output/plotting_data/quality/rna/"
 excludedGene="${1:-all}"
 
 if [[ "$excludedGene" == "all" || -z "$excludedGene" ]]; then

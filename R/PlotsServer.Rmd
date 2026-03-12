@@ -17,18 +17,29 @@ library(cowplot)
 ```
 
 ```{r}
+molecule = "dna"
+```
+
+
+```{r}
+if(molecule == "rna"){
+  excluded = c("ENSSSCT00000019676","ENSSSCT00000043235")
+} else {
+  excluded = c("ENSSSCG00000018081", "ENSSSCG00000035362")
+}
+
 numReads = 27000000
-gridsearchDir = "../output/plotting_data/quality/dna/"
+gridsearchDir = paste0("../output/plotting_data/quality/", molecule, "-contained/")
 allGenesDir = "../output/all_gene_analysis/"
-plotsDir = paste0(gridsearchDir, "plots/")
+plotsDir = paste0(gridsearchDir, "plotsNew/")
 extType = ".jpg"
-long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) %>% 
- filter(mapping_reads != 0) 
+long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) #%>% 
+# filter(mapping_reads != 0) 
 long_summary = long_summary %>% mutate(not_recall = matched/mapping_reads, not_precision = matched/filtered_reads, percentReads = filtered_reads/numReads)
 
 long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_reads))
 
-long_summary %>% filter(gene != "ENSSSCG00000018081" & threshold == 90 & mode == "and") %>% summarise(max(filtered_reads))
+long_summary %>% filter(gene != excluded & threshold == 90 & mode == "and") %>% summarise(max(filtered_reads))
 ```
 
 
@@ -138,11 +149,86 @@ plot_readCountByThreshold(105, "both")
 
 ```{r}
 
-long_filtered = long_summary %>% filter(gene != "ENSSSCG00000018081")
-plot_readCountBoxByThreshold <- function(t_val, modeString) {
+saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
+
+  for(t in unique(long_summary$threshold)) {
+    for(mode in modes){
+      tryCatch({
+
+        p <- plotFunc(
+          modeString = mode,
+          xMetric = k,
+          filter1Metric = threshold,
+          filter1Value = t
+        )
+
+        pathname <- paste0(
+          plotsDir,
+          "ReadCount/Box/ReadCountByThreshold_T",
+          t, "_", mode, "_filtered2", extType
+        )
+
+        #savePlotReport(pathname, p)
+        print(p)
+
+      }, error = function(e){
+
+        message(
+          "Failed for threshold=", t,
+          " mode=", mode,
+          " | Error: ", e$message
+        )
+
+      })
+    }
+  }
+
+  for(k_val in unique(long_summary$k)) {
+    for(mode in modes){
+      tryCatch({
+
+        p <- plotFunc(
+          modeString = mode,
+          xMetric = threshold,
+          filter1Metric = k,
+          filter1Value = k_val
+        )
+
+        pathname <- paste0(
+          plotsDir,
+          "ReadCount/Box/ReadCountByK_K",
+          k_val, "_", mode, "_filtered2", extType
+        )
+
+        #savePlotReport(pathname, p)
+        print(p)
+
+      }, error = function(e){
+
+        message(
+          "Failed for k=", k_val,
+          " mode=", mode,
+          " | Error: ", e$message
+        )
+
+      })
+    }
+  }
+}
+```
+
+
+```{r}
+
+long_filtered = long_summary %>% filter(!( gene %in% excluded))
+plot_readCountBoxByThreshold <- function(modeString, xMetric, filter1Metric, filter1Value) {
+  
+  xString = deparse(substitute(xMetric))
+  filter1String = deparse(substitute(filter1Metric))
+  subStr = paste(filter1String, "=", filter1Value)
 
   plot_data <- long_filtered %>% 
-    filter(threshold == t_val)
+    filter({{filter1Metric}} == filter1Value)
 
   if (modeString != "both") {
     plot_data <- plot_data %>% filter(mode == modeString)
@@ -150,8 +236,8 @@ plot_readCountBoxByThreshold <- function(t_val, modeString) {
 
   max_filtered <- max(plot_data$filtered_reads, na.rm = TRUE)
   max_not_filtered <- max(plot_data$not_filtered, na.rm = TRUE)
-  scale_factor <- max_filtered / max_not_filtered
-
+  scale_factor <- ifelse(max_not_filtered == 0, 1, max_filtered / max_not_filtered)
+                       
   plot_data_long <- plot_data %>%
     tidyr::pivot_longer(
       cols = c(filtered_reads, not_filtered),
@@ -170,9 +256,9 @@ plot_readCountBoxByThreshold <- function(t_val, modeString) {
         read_count
       )
     )
-
+  
   p <- ggplot(plot_data_long,
-              aes(x = factor(k),
+              aes(x = factor({{xMetric}}),
                   y = read_count,
                   color = read_type,
                   fill = after_scale(scales::alpha(color, 0.4)))) +
@@ -183,15 +269,16 @@ plot_readCountBoxByThreshold <- function(t_val, modeString) {
       labels = scales::label_number(scale_cut = scales::cut_short_scale()),
       sec.axis = sec_axis(~ . / scale_factor,
                           name = "Not Filtered Reads",
-                          labels = scales::label_number(scale_cut = scales::cut_short_scale()))
+                          labels = scales::label_number(scale_cut = scales::cut_short_scale())
+                          )
     ) +
     scale_color_manual(values = c(
       "Filtered Reads" = "#2EC4B6",
       "Not Filtered Reads" = "#EA526F"
-    )) +
+    ))  +
     labs(
-      title = paste("Read Counts by k (threshold =", t_val, ", mode =", modeString, ")"),
-      x = "k",
+      title = paste0("Read Counts by ", xString, " (", filter1String, " = ", filter1Value, ", mode = ", modeString, ")"),
+      x = xString,
       fill = "Read Type"
     ) +
     themeForSaving() +
@@ -208,25 +295,46 @@ plot_readCountBoxByThreshold <- function(t_val, modeString) {
 
   return(p)
 }
+long_filtered %>% filter(k == 15) %>% arrange(desc(not_filtered)) %>% select(k, offset, threshold, mode, gene, not_filtered)
+```
 
-saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
-  for(t in unique(long_summary$threshold)) {
-  for(mode in modes){
-    if(mode == "or" & t == 75) next
-    p = plotFunc(t_val = t, modeString = mode)
-    pathname=paste0(plotsDir, "ReadCount/Box/ReadCountByThreshold_T", t, "_", mode,"_filtered", extType)
-    savePlotReport(pathname, p)
-    print(p)
-  }
+```{r}
+for(value in c("not_filtered", "filtered_reads")){
+  df = long_filtered %>%
+  filter(k == 15) %>%
+  group_by(mode, threshold) %>%
+  summarise(
+      Q1 = quantile(.data[[value]], 0.25, na.rm = TRUE),
+      Median = quantile(.data[[value]], 0.50, na.rm = TRUE),
+      Q3 = quantile(.data[[value]], 0.75, na.rm = TRUE),
+      variable = value,
+      .groups = "drop"
+    )
+  print(df)
 }
-}
 
-saveReadCounts(plotFunc = plot_readCountBoxByThreshold)
 
-plot_readCountBoxByThreshold(75, "and")
+plot_readCountBoxByThreshold("both", threshold, k, 15)
+#saveReadCounts(plotFunc = plot_readCountBoxByThreshold, modes = c("both"))
+ 
+long_filtered %>%
+  filter(k == 15 & mode == "or") %>%
+  ggplot(aes(x = factor(threshold), y = not_filtered, group = threshold)) +
+  geom_boxplot() +
+  coord_cartesian(ylim = c(0,50))
 
-long_summary %>% arrange(desc(mapping_reads))
-
+long_filtered %>%
+  select(threshold, k, offset, gene, mode, not_filtered) %>%
+  pivot_wider(
+    names_from = mode,
+    values_from = not_filtered
+  ) %>%
+  mutate(diff = and - or) %>%
+  group_by(threshold, k, offset) %>%
+  summarise(mean_diff = mean(diff, na.rm = TRUE),
+            max_diff = max(diff, na.rm = T),
+            .groups = "drop")  %>% #filter(k == 15)
+  arrange(desc(max_diff))
 ```
 
 
@@ -301,10 +409,10 @@ getMappingReads<- function(gene_id, df = long_summary){
 }
 
 totalCounts = readTotalSummary()
-totalCounts_no18 = readTotalSummary("_excluding_ENSSSCG00000018081") %>% mutate(totalMapped = totalMapped - getMappingReads("ENSSSCG00000018081"))
+totalCounts_no18 = readTotalSummary(paste0("_excluding_", excluded)) %>% mutate(totalMapped = totalMapped - getMappingReads(excluded))
 
 
-long_summary %>% filter(gene == "ENSSSCG00000018081")
+long_summary %>% filter(gene == excluded)
 
 totalCounts %>% anti_join(totalCounts_no18)
 ```
@@ -347,13 +455,13 @@ saveMappingRates <- function(df = totalCounts, captionStr = ""){
   }
 }
 
-long_summary %>% filter(gene == "ENSSSCT00000019676")
+long_summary %>% filter(gene == excluded)
 ```
 
 
 
 ```{r}
-saveMappingRates(totalCounts_no18, captionStr = "No_ENSSSCT00000019676")
+saveMappingRates(totalCounts_no18, captionStr = paste0("No_", excluded))
 ```
 
 ```{r}
