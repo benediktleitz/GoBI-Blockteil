@@ -46,3 +46,34 @@ DNA
 6 or           90 4044. 19614.  99019. filtered_reads
 7 or          105 2540. 12843   51748. filtered_reads
 8 or          120 1286. 10400   26241. filtered_reads
+
+
+dna mapping rate
+# A tibble: 2 × 3
+  mode   mean median
+  <chr> <dbl>  <dbl>
+1 and   0.846  0.926
+2 or    0.952  0.996
+
+k = offset = 15 & threshold = 105
+
+mode   mean median
+  <chr> <dbl>  <dbl>
+1 and   0.957  0.979
+2 or    0.997  1.00 
+
+
+
+rna mapping rate
+# A tibble: 2 × 3
+  mode   mean median
+  <chr> <dbl>  <dbl>
+1 and   0.891  0.967
+2 or    0.966  0.995
+
+k = offset = 15 & threshold = 105
+# A tibble: 2 × 3
+  mode   mean median
+  <chr> <dbl>  <dbl>
+1 and   0.978  0.989
+2 or    0.996  0.999

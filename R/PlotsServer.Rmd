@@ -18,6 +18,7 @@ library(cowplot)
 
 ```{r}
 molecule = "dna"
+fastq = "H5"
 ```
 
 
@@ -28,26 +29,21 @@ if(molecule == "rna"){
   excluded = c("ENSSSCG00000018081", "ENSSSCG00000035362")
 }
 
-numReads = 27000000
+extType = ".jpg"
+
+readCounts = read_tsv("../output/read_counts.tsv") %>% mutate(filename = str_split_i(filename, "-", 1)) %>% distinct() 
+nFastqReads = readCounts %>% filter(filename == fastq) %>% pull(read_count)
+numReads = nFastqReads
+
 gridsearchDir = paste0("../output/plotting_data/quality/", molecule, "-contained/")
 allGenesDir = "../output/all_gene_analysis/"
 plotsDir = paste0(gridsearchDir, "plotsNew/")
-extType = ".jpg"
+
 long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) #%>% 
 # filter(mapping_reads != 0) 
 long_summary = long_summary %>% mutate(not_recall = matched/mapping_reads, not_precision = matched/filtered_reads, percentReads = filtered_reads/numReads)
 
-long_summary %>% select(mapping_reads, filtered_reads) %>% arrange((filtered_reads))
-
-long_summary %>% filter(gene != excluded & threshold == 90 & mode == "and") %>% summarise(max(filtered_reads))
 ```
-
-
-```{r}
-
-
-```
-
 
 ```{r}
 plotMetric("or", not_recall, mean)
@@ -168,8 +164,8 @@ saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
           t, "_", mode, "_filtered2", extType
         )
 
-        #savePlotReport(pathname, p)
-        print(p)
+        savePlotReport(pathname, p)
+        #print(p)
 
       }, error = function(e){
 
@@ -200,8 +196,8 @@ saveReadCounts <- function(modes = c("or", "and", "both"), plotFunc){
           k_val, "_", mode, "_filtered2", extType
         )
 
-        #savePlotReport(pathname, p)
-        print(p)
+        savePlotReport(pathname, p)
+        #print(p)
 
       }, error = function(e){
 
@@ -295,7 +291,9 @@ plot_readCountBoxByThreshold <- function(modeString, xMetric, filter1Metric, fil
 
   return(p)
 }
-long_filtered %>% filter(k == 15) %>% arrange(desc(not_filtered)) %>% select(k, offset, threshold, mode, gene, not_filtered)
+
+saveReadCounts(plotFunc = plot_readCountBoxByThreshold, modes = c("both"))
+
 ```
 
 ```{r}
@@ -315,7 +313,6 @@ for(value in c("not_filtered", "filtered_reads")){
 
 
 plot_readCountBoxByThreshold("both", threshold, k, 15)
-#saveReadCounts(plotFunc = plot_readCountBoxByThreshold, modes = c("both"))
  
 long_filtered %>%
   filter(k == 15 & mode == "or") %>%
@@ -400,8 +397,7 @@ readcounts %>% write_tsv(file = "../output/read_counts.tsv")
 
 ```{r}
 readTotalSummary <- function(ext = ""){
-  df = read_tsv(paste0(gridsearchDir, "totalCountSummary3", ext, ".tsv")) %>% mutate(nFastqReads = numReads,
-                                                                                  matched = totalFiltered - filtered_not_mapped)
+  df = read_tsv(paste0(gridsearchDir, "totalCountSummary3", ext, ".tsv")) %>% mutate(nFastqReads = numReads)
   return(df)
 }
 getMappingReads<- function(gene_id, df = long_summary){
@@ -409,12 +405,13 @@ getMappingReads<- function(gene_id, df = long_summary){
 }
 
 totalCounts = readTotalSummary()
-totalCounts_no18 = readTotalSummary(paste0("_excluding_", excluded)) %>% mutate(totalMapped = totalMapped - getMappingReads(excluded))
+totalCountsFiltered = readTotalSummary(ext = "_excl")
 
+print(long_filtered %>% mutate(MR = matched/mapping_reads) %>% drop_na() %>% 
+  filter(k == 15 & offset == 15 & threshold == 105) %>%
+  group_by(mode) %>%
+  summarise(mean = mean(MR), median = median(MR)))
 
-long_summary %>% filter(gene == excluded)
-
-totalCounts %>% anti_join(totalCounts_no18)
 ```
 
 ```{r}
@@ -469,32 +466,64 @@ saveMappingRates()
 ```
 
 
+
+
+
 ```{r}
-
-
 plotScatterTradeOff <- function(modeString){
-  p = totalCounts_no18 %>%  filter(mode == modeString) %>% 
-  mutate(mappingRate = matched/totalMapped,
-         filteredRate = totalFiltered/nFastqReads) %>% 
-  ggplot(aes(x = mappingRate, y = filteredRate)) +
-  geom_point(aes(shape = factor(threshold), color = factor(k)), size = 2.5, alpha = 0.7) +
-  labs( x = "matched/mapped", y = "filtered/all") +
-  themeForSaving() +
-  theme(legend.position = "right", legend.justification = "center") +
-  labs(title = "Mappingrate vs Filterrate tradeoff",
-       subtitle = paste("Mode:", modeString)) +
-  coord_cartesian(xlim = c(0,1), ylim = c(0,0.07))
+  
+  
+  p = totalCounts %>%  filter(mode == modeString) %>% 
+  mutate(mappingRate = matchedReads/totalMapped,
+         filteredRate = totalRetained/nFastqReads) 
+  lowerLimit = floor((p %>% summarise(minMR = min(mappingRate)) %>% pull(minMR)) * 100) / 100
+  
+  p = p %>% 
+    ggplot(aes(x = mappingRate, y = filteredRate)) +
+    geom_point(aes(shape = factor(threshold), color = factor(k)), size = 2.5, alpha = 0.7) +
+    labs( x = "matched/mapped", y = "filtered/all") +
+    themeForSaving() +
+    theme(legend.position = "none") +
+    labs(title = "Mappingrate vs Filterrate tradeoff",
+         subtitle = paste("Mode:", modeString)) +
+    coord_cartesian(xlim = c(lowerLimit,1)#, ylim = c(0,0.008)
+                    ) +
+    scale_x_continuous(labels = scales::label_percent(accuracy = 0.1)) +
+    scale_y_continuous(labels = scales::label_percent(accuracy = 0.01))
   
   return(p)
 }
 
+badK = c(17,19,22,23,26,27,28,29)
+
+#totalCounts = totalCounts %>% filter(!k %in% badK)
+#totalCountsFiltered = totalCountsFiltered %>% filter(!k %in% badK)
 for(mode in c("or", "and")){
   p = plotScatterTradeOff(mode)
-  savePlotReport(paste0(plotsDir, "scatter3/mapping_filter_", mode, "_no18",extType), p)
+  savePlotReport(paste0(plotsDir, "scatter/mapping_filter_", mode, "",extType), p)
   print(p)
 }
+```
 
-p = plotScatterTradeOff("or")
+
+```{r}
+#p = plotScatterTradeOff("or")
+
+long_summary %>% 
+  filter(!(gene %in% excluded)) %>%
+  mutate(mappingRate = matched/mapping_reads) %>% mutate_all(~replace(., is.na(.), 0)) %>%
+  filter(k == 15 & offset == 15 & mode == "or") %>%
+  ggplot(aes(x = threshold, y = mappingRate, group = threshold)) +
+  geom_boxplot()
+
+long_filtered %>% 
+  filter(mode == "or" & offset == k) %>% 
+  group_by(k, threshold) %>%
+  summarise(totalMatched = sum(matched),
+            totalMapped = sum(mapping_reads),
+            mappingRate = totalMatched/totalMapped,
+            totalNF = sum(not_filtered))
+excluded
 ```
 
 ```{r}

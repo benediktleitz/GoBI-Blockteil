@@ -1,101 +1,149 @@
 #!/usr/bin/env bash
 
-# read lists are grouped by threshold under read-lists/threshold_<t>/
+shopt -s nullglob
 
-gridsearchDir="output/plotting_data/quality/rna/"
-excludedGene="${1:-all}"
+gridsearchDir="${1:-${GRIDSEARCH_DIR:-output/plotting_data/quality/dna-contained/}}"
+summaryFile="${gridsearchDir}/totalCountSummary3_excl.tsv"
+excludedGene1="ENSSSCG00000018081"
+excludedGene2="ENSSSCG00000035362"
 
-if [[ "$excludedGene" == "all" || -z "$excludedGene" ]]; then
-    excludedGene=""
-    summaryFile="${gridsearchDir}/totalCountSummary3.tsv"
-else
-    summaryFile="${gridsearchDir}/totalCountSummary3_excluding_${excludedGene}.tsv"
+if [[ ! -d "$gridsearchDir" ]]; then
+    echo "Error: gridsearch directory not found: $gridsearchDir" >&2
+    exit 1
 fi
 
-geneColumn=0
-
-if [[ -n "$excludedGene" ]]; then
-    firstMatrix=$(find "${gridsearchDir}" -path '*/mode_*/read2gene_matrix.tsv' | head -n 1)
-    if [[ -n "$firstMatrix" ]]; then
-        geneColumn=$(awk -F'\t' -v gene="$excludedGene" 'NR==1 {for (i=1; i<=NF; i++) if ($i == gene) {print i; exit}}' "$firstMatrix")
-        geneColumn=${geneColumn:-0}
-    fi
-
-    if [[ "$geneColumn" -eq 0 ]]; then
-        echo "Warning: gene ${excludedGene} not found in matrix headers. Running without exclusion." >&2
-        excludedGene=""
-    fi
+readListsRoot="${gridsearchDir}/read-lists"
+if [[ ! -d "$readListsRoot" ]]; then
+    echo "Error: read-lists directory not found: $readListsRoot" >&2
+    exit 1
 fi
 
-fullReadsDir="${gridsearchDir}/read-lists/FullReads"
-mkdir -p "$fullReadsDir"
+declare -A mappedSetByThresholdMode
 
-# Build one full-read file per threshold once.
-for thresholdDir in "${gridsearchDir}"/read-lists/threshold_*; do
+for thresholdDir in "$readListsRoot"/threshold_*; do
     [[ -d "$thresholdDir" ]] || continue
+    threshold="${thresholdDir##*/}"
+    threshold="${threshold#threshold_}"
 
-    thresholdName=$(basename "$thresholdDir")
-    thresholdValue=${thresholdName#threshold_}
-    fullReadsFile="${fullReadsDir}/FullReads_threshold_${thresholdValue}.txt"
+    for modeDir in "$thresholdDir"/*; do
+        [[ -d "$modeDir" ]] || continue
+        mode="${modeDir##*/}"
 
-    rm -f "$fullReadsFile"
-    for f in "$thresholdDir"/*.txt; do
-        [[ -f "$f" ]] || continue
-        [[ "$(basename "$f")" == "FullReadList.txt" ]] && continue
-        cat "$f" >> "$fullReadsFile"
+        tmpMapped=$(mktemp)
+        if compgen -G "$modeDir/*.txt" > /dev/null; then
+            tmpMappedRaw=$(mktemp)
+            : > "$tmpMappedRaw"
+
+            for readListFile in "$modeDir"/*.txt; do
+                [[ -f "$readListFile" ]] || continue
+
+                baseName="${readListFile##*/}"
+                geneName="${baseName%.txt}"
+                geneName="${geneName%_reads}"
+
+                if [[ -n "$excludedGene1" && "$geneName" == "$excludedGene1" ]]; then
+                    continue
+                fi
+                if [[ -n "$excludedGene2" && "$geneName" == "$excludedGene2" ]]; then
+                    continue
+                fi
+
+                awk -F'\t' '{print $1}' "$readListFile" >> "$tmpMappedRaw"
+            done
+
+            sort -u "$tmpMappedRaw" > "$tmpMapped"
+            rm -f "$tmpMappedRaw"
+        else
+            : > "$tmpMapped"
+        fi
+
+        key="${threshold}|${mode}"
+        mappedSetByThresholdMode["$key"]="$tmpMapped"
     done
 done
 
-echo -e "mode\tk\toffset\tthreshold\ttotalFiltered\ttotalMapped\tfiltered_not_mapped\tmapped_not_filtered" > "$summaryFile"
+echo -e "k\toffset\tthreshold\tmode\ttotalMapped\ttotalRetained\tmatchedReads\tmapped_not_retained" > "$summaryFile"
 
-for kdir in ${gridsearchDir}/k_*; do
-    k=$(basename "$kdir" | cut -d_ -f2)
+for kdir in "$gridsearchDir"/k_*; do
+    [[ -d "$kdir" ]] || continue
+    k="${kdir##*/}"
+    k="${k#k_}"
 
-    for odir in ${kdir}/offset_*; do
-        offset=$(basename "$odir" | cut -d_ -f2)
+    for odir in "$kdir"/offset_*; do
+        [[ -d "$odir" ]] || continue
+        offset="${odir##*/}"
+        offset="${offset#offset_}"
 
-        for tdir in ${odir}/threshold_*; do
-            threshold=$(basename "$tdir" | cut -d_ -f2)
+        for tdir in "$odir"/threshold_*; do
+            [[ -d "$tdir" ]] || continue
+            threshold="${tdir##*/}"
+            threshold="${threshold#threshold_}"
 
-            thresholdFullReads="${fullReadsDir}/FullReads_threshold_${threshold}.txt"
-            if [[ ! -f "$thresholdFullReads" ]]; then
-                echo "Warning: missing full reads file for threshold ${threshold}: ${thresholdFullReads}" >&2
-                continue
-            fi
+            for mdir in "$tdir"/mode_*; do
+                [[ -d "$mdir" ]] || continue
+                mode="${mdir##*/}"
+                mode="${mode#mode_}"
 
-            tmpMapped=$(mktemp)
-            cut -f1 "$thresholdFullReads" | sort -u > "$tmpMapped"
-            totalMapped=$(wc -l < "$tmpMapped")
+                matrixFile="$mdir/read2gene_matrix.tsv"
+                [[ -f "$matrixFile" ]] || continue
 
-            for mdir in ${tdir}/mode_*; do
-                mode=$(basename "$mdir" | cut -d_ -f2)
-
-                file="${mdir}/read2gene_matrix.tsv"
-
-                if [[ -f "$file" ]]; then
-
-                    tmpFiltered=$(mktemp)
-
-                    # unique filtered reads
-                    if [[ -z "$excludedGene" ]]; then
-                        awk -F'\t' 'NR > 1 {print $1}' "$file" | sort -u > "$tmpFiltered"
-                    else
-                        awk -F'\t' -v col="$geneColumn" 'NR > 1 && ($(col) + 0) == 0 {print $1}' "$file" | sort -u > "$tmpFiltered"
-                    fi
-
-                    totalFiltered=$(wc -l < "$tmpFiltered")
-
-                    # set differences
-                    filtered_not_mapped=$(comm -23 "$tmpFiltered" "$tmpMapped" | wc -l)
-                    mapped_not_filtered=$(comm -13 "$tmpFiltered" "$tmpMapped" | wc -l)
-
-                    echo -e "${mode}\t${k}\t${offset}\t${threshold}\t${totalFiltered}\t${totalMapped}\t${filtered_not_mapped}\t${mapped_not_filtered}" >> "$summaryFile"
-
-                    rm "$tmpFiltered"
+                key="${threshold}|${mode}"
+                mappedSet="${mappedSetByThresholdMode[$key]}"
+                if [[ -z "$mappedSet" || ! -f "$mappedSet" ]]; then
+                    echo "Warning: missing mapped read-list set for threshold=${threshold}, mode=${mode}" >&2
+                    continue
                 fi
-            done
 
-            rm "$tmpMapped"
+                tmpRetained=$(mktemp)
+                if [[ -z "$excludedGene1" && -z "$excludedGene2" ]]; then
+                    awk -F'\t' 'NR>1 {print $1}' "$matrixFile" | sort -u > "$tmpRetained"
+                else
+                    awk -F'\t' -v gene1="$excludedGene1" -v gene2="$excludedGene2" '
+                        NR==1 {
+                            for (i=2; i<=NF; i++) {
+                                if ((gene1 != "" && $i == gene1) || (gene2 != "" && $i == gene2)) {
+                                    excludedCols[i] = 1
+                                }
+                            }
+                            next
+                        }
+
+                        NR>1 {
+                            hasExcluded = 0
+                            hasIncluded = 0
+
+                            for (i=2; i<=NF; i++) {
+                                value = $i + 0
+                                if (value != 0) {
+                                    if (i in excludedCols) {
+                                        hasExcluded = 1
+                                    } else {
+                                        hasIncluded = 1
+                                        break
+                                    }
+                                }
+                            }
+
+                            if (hasIncluded || !hasExcluded) {
+                                print $1
+                            }
+                        }
+                    ' "$matrixFile" | sort -u > "$tmpRetained"
+                fi
+
+                totalMapped=$(wc -l < "$mappedSet")
+                totalRetained=$(wc -l < "$tmpRetained")
+                matchedReads=$(comm -12 "$mappedSet" "$tmpRetained" | wc -l)
+                mappedNotRetained=$(comm -23 "$mappedSet" "$tmpRetained" | wc -l)
+
+                echo -e "${k}\t${offset}\t${threshold}\t${mode}\t${totalMapped}\t${totalRetained}\t${matchedReads}\t${mappedNotRetained}" >> "$summaryFile"
+
+                rm -f "$tmpRetained"
+            done
         done
     done
+done
+
+for mappedSet in "${mappedSetByThresholdMode[@]}"; do
+    rm -f "$mappedSet"
 done
