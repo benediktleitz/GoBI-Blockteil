@@ -116,6 +116,7 @@ plotFullTiming <- function(xMetric, filter1Metric, filter1Value, filter2Metric =
     df <- df %>% filter(!!filter2Metric == !!filter2Value)
     subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
   }
+  print(df)
 
   x_breaks <- df %>% pull(!!xMetric) %>% unique()
 
@@ -141,7 +142,7 @@ plotFullTiming <- function(xMetric, filter1Metric, filter1Value, filter2Metric =
   return(p)
 }
 
-saveFullPlots(plotFullTiming, "meanReads", T)
+saveFullPlots(plotFullTiming, "meanReads", F)
 
  
 ```
@@ -255,6 +256,8 @@ plotPerCPUSec <- function(xMetric, filter1Metric, filter1Value, filter2Metric = 
     df <- df %>% filter(!!filter2Metric == !!filter2Value)
     subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
   }
+  
+  print(df)
 
   x_breaks <- df %>% pull(!!xMetric) %>% unique()
   
