@@ -1,10 +1,11 @@
 target/
-data
 *.class
 *.jar
 .gitignore
 .idea/
-data/
+data/*
+!data/gene_list_filter.txt
+!data/gene_list_performance.txt
 output/
 output
 src/main/java/blockteil/Test.java
