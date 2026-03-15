@@ -19,10 +19,10 @@ mkdir -p "$OUT_BASE"
 
 FASTA_MNT="/mnt/raidbio2/extdata/praktikum/genprakt/genprakt-ws25/Block/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz"
 GTF_MNT="/mnt/raidbio2/extdata/praktikum/genprakt/genprakt-ws25/Block/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz"
-GENES_MNT="/mnt/biocluster/praktikum/genprakt/gruppe_e/gene_list.txt"
+GENES_MNT="/home/l/leitzb/public_html/gene_list.txt"
 FASTA_IDX_MNT="/mnt/raidbio2/extdata/praktikum/genprakt/genprakt-ws25/Block/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz.fai"
 FASTA_IDX_GZ_MNT="/mnt/raidbio2/extdata/praktikum/genprakt/genprakt-ws25/Block/pig-genome/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz.gzi"
-JAR_MNT="/mnt/biocluster/praktikum/genprakt/gruppe_e/gta_filter.jar"
+JAR_MNT="/home/l/leitzb/public_html/gta_filter.jar"
 
 FASTA="$OUT_BASE/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz"
 GTF="$OUT_BASE/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz"
