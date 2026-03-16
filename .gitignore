@@ -16,3 +16,4 @@ python/test.py
 tmp/
 python/compare_to_mapping/__pycache__/
 *.pyc
+expData/

@@ -56,7 +56,6 @@ dna mapping rate
 2 or    0.952  0.996
 
 k = offset = 15 & threshold = 105
-
 mode   mean median
   <chr> <dbl>  <dbl>
 1 and   0.957  0.979

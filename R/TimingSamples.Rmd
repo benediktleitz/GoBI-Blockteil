@@ -215,7 +215,7 @@ res = df %>%
   summarise(min = min(meanMaxByte), max = max(meanMaxByte))
 lims = c(0, ceiling(res$max / 100) * 100)
 
-saveFullPlots(plotByte, "bytePerCore", T,df = df, limsList = lims, titleMetric = "Mean Max Memory Per Core")
+saveFullPlots(plotByte, "bytePerCore", F,df = df, limsList = lims, titleMetric = "Mean Max Memory Per Core")
 
 df = timingSummarised %>% 
   mutate(#meanMaxByte = meanMaxByte / cpuUtil,
@@ -294,7 +294,7 @@ plotPerCPUSec <- function(xMetric, filter1Metric, filter1Value, filter2Metric = 
   return(p)
 }
 
-saveFullPlots(plotPerCPUSec, "meanReadsCPUSec", T, minute = F)
+saveFullPlots(plotPerCPUSec, "meanReadsCPUSec", F, minute = F)
 
 
 ```
@@ -399,7 +399,7 @@ scatterMaxRSS_RPM <- function(xMetric, filter1Metric, filter1Value, filter2Metri
   return(p)
 }
 
-saveFullPlots(scatterMaxRSS_RPM, "scatter_maxRSS_RPM", T)
+saveFullPlots(scatterMaxRSS_RPM, "scatter_maxRSS_RPM", F)
 ```
 
 ```{r}
