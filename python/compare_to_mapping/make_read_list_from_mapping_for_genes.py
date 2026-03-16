@@ -124,7 +124,7 @@ def skip_read(read, chrom, regions, threshold=105):
         return True
     if read.next_reference_name != chrom:
         return True
-    if clipped_bases(read) > threshold:
+    if 150 - clipped_bases(read) < threshold:
         return True
     if out_of_bounds(read, regions):
         return True
@@ -200,7 +200,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create a read list from a mapping file for specific genes.")
     parser.add_argument("--mapping", default="data/pig-data-rnaseq/mapped/minimap2/H5-12939-T2.sorted.bam", help="Path to the mapping file (BAM).")
-    parser.add_argument("--gene-list", required=True, help="Path to the file containing the list of genes.")
+    parser.add_argument("--gene-list", default="output/plotting_data/snp/gene_list.txt", help="Path to the file containing the list of genes.")
     parser.add_argument("--gtf", default="data/pig-genome/Sus_scrofa.Sscrofa11.1.115.chr.gtf.gz", help="Path to the GTF file containing gene annotations." )
     parser.add_argument("--od", required=True, help="Path to the output directory where the read lists will be saved (one for each gene).")
     parser.add_argument("--rna", action="store_true", help="Indicates that the transcripts should be considered, not genes.")
