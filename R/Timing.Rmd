@@ -31,7 +31,7 @@ extType = ".jpg"
 
 
 readTiming <- function(moleculeStr){
-  df = read_tsv(paste0(gridsearchDir, moleculeStr, "/time_summary.tsv"),
+  df = read_tsv(paste0(gridsearchDir, moleculeStr,  "/time_summary.tsv"),
                 col_types = cols(elapsed = col_character())) %>% 
     mutate(mode = pair_mode,
            molecule = moleculeStr,
@@ -120,9 +120,3 @@ plotRunTimeFixedValue(105, threshold, k)
 
 #savePlotReport(paste0(gridsearchDir, "test", extType), p)
 ```
-
-
-```{r}
-
-```
-

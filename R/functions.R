@@ -109,5 +109,3 @@ parse_elapsed <- function(x) {
 getMaxResSize <- function(verboseDF){
   return(as.numeric((verboseDF %>% filter(cmd == "Maximum resident set size (kbytes)") )$value))
 }
-
-
