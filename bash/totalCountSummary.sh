@@ -2,7 +2,7 @@
 
 shopt -s nullglob
 
-gridsearchDir="${1:-${GRIDSEARCH_DIR:-output/plotting_data/quality/dna-contained/}}"
+gridsearchDir="${1:-${GRIDSEARCH_DIR:-output/plotting_data/quality/rna-contained/}}"
 summaryFile="${gridsearchDir}/totalCountSummary3_excl.tsv"
 excludedGene1="ENSSSCG00000018081"
 excludedGene2="ENSSSCG00000035362"
@@ -18,6 +18,9 @@ if [[ ! -d "$readListsRoot" ]]; then
     exit 1
 fi
 
+fullReadsDir="${gridsearchDir}/full-read-lists"
+mkdir -p "$fullReadsDir"
+
 declare -A mappedSetByThresholdMode
 
 for thresholdDir in "$readListsRoot"/threshold_*; do
@@ -29,7 +32,7 @@ for thresholdDir in "$readListsRoot"/threshold_*; do
         [[ -d "$modeDir" ]] || continue
         mode="${modeDir##*/}"
 
-        tmpMapped=$(mktemp)
+        fullReadsFile="${fullReadsDir}/FullReads_threshold_${threshold}_${mode}.txt"
         if compgen -G "$modeDir/*.txt" > /dev/null; then
             tmpMappedRaw=$(mktemp)
             : > "$tmpMappedRaw"
@@ -51,14 +54,14 @@ for thresholdDir in "$readListsRoot"/threshold_*; do
                 awk -F'\t' '{print $1}' "$readListFile" >> "$tmpMappedRaw"
             done
 
-            sort -u "$tmpMappedRaw" > "$tmpMapped"
+            sort -u "$tmpMappedRaw" > "$fullReadsFile"
             rm -f "$tmpMappedRaw"
         else
-            : > "$tmpMapped"
+            : > "$fullReadsFile"
         fi
 
         key="${threshold}|${mode}"
-        mappedSetByThresholdMode["$key"]="$tmpMapped"
+        mappedSetByThresholdMode["$key"]="$fullReadsFile"
     done
 done
 
@@ -144,6 +147,3 @@ for kdir in "$gridsearchDir"/k_*; do
     done
 done
 
-for mappedSet in "${mappedSetByThresholdMode[@]}"; do
-    rm -f "$mappedSet"
-done
