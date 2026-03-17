@@ -20,7 +20,7 @@ source("functions.R")
 
 ```{r}
 numReads = 27000000
-gridsearchDir = "../output/plotting_data/quality/rna/"
+gridsearchDir = "../output/plotting_data/quality/dna/"
 kmerDir = paste0(gridsearchDir, "KMER/")
 plotsDir = paste0(gridsearchDir, "plots/")
 extType = ".jpg"
@@ -34,11 +34,11 @@ k2Plot = {}
 
 k2Map <- list()
 
-for (k in seq(from = 12, to = 30, by = 5)) {
+for (k in seq(from = 12, to = 30, by = 2)) {
   kmer <- read_tsv(paste0(kmerDir, "k_", k, ".txt")) %>%
     mutate(geneSetSize = str_count(gene, ","))
   
-  leastUniqueKmers = rbind(leastUniqueKmers, kmer %>% arrange(desc(geneSetSize)) %>% head(10) %>% mutate(k = k)) 
+  #leastUniqueKmers = rbind(leastUniqueKmers, kmer %>% arrange(desc(geneSetSize)) %>% head(10) %>% mutate(k = k)) 
 
   k2Map[[as.character(k)]] <- kmer
 }
@@ -110,7 +110,12 @@ counts_long <- map_dfr(seq(from = 12, to = 30, by = 2), function(k) {
   mutate(total_kmers = sum(count)) %>%
   ungroup()
 
-head(counts_long)
+```
+
+
+```{r}
+
+
 
 
 p = counts_long %>% 
@@ -123,13 +128,68 @@ ggplot(aes(x = geneSetSize, y = count, color = k)) +
     ) +
   themeForSaving() +
   labs(
-    title = "Distribution of Transcript Mapping per k-mer",
-    x = "Number of transcripts a k-mer maps to",
+    title = "Distribution of Gene Mapping per k-mer",
+    x = "Number of genes a k-mer maps to",
     y = "Number of k-mers"
   )+
   theme(legend.position = "right", legend.justification ="center") +
   coord_cartesian(ylim = c(1,1000000))
 
-savePlotReport(paste0(gridsearchDir, "kmerdist", extType), p)
+savePlotReport(paste0("../output/finalplots_real/kmerDistribution_dna", extType), p)
+```
+
+```{r}
+counts_long %>% group_by(k) %>% summarise(totalCount = mean(total_kmers)) %>% 
+  ggplot(aes(x = k, y = totalCount)) +
+  geom_col() +
+  themeForSaving() +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(title = "Number of Distinct K-mers in Reference Index per k")
+```
+
+
+
+### TOTAL BARPLOT
+
+```{r}
+get_total_kmers <- function(base_dir, mode_label) {
+  kmerDir <- paste0(base_dir, mode_label, "/KMER/")
+  
+  map_dfr(seq(from = 12, to = 30, by = 2), function(k) {
+    read_tsv(paste0(kmerDir, "k_", k, ".txt"), show_col_types = FALSE) %>%
+      mutate(
+        geneSetSize = str_count(gene, ","),
+        k = k
+      )
+  }) %>%
+    count(k, geneSetSize) %>%
+    group_by(k) %>%
+    summarise(total_kmers = sum(n), .groups = "drop") %>%
+    mutate(mode = mode_label)
+}
+
+base_dir = "../output/plotting_data/quality/"
+total_dna = get_total_kmers(base_dir, "dna")
+total_rna = get_total_kmers(base_dir, "rna")
+
+total_kmers_df <- bind_rows(total_dna, total_rna)
+```
+
+```{r}
+head(total_kmers_df)
+```
+
+
+```{r}
+p = total_kmers_df %>% mutate(mode = toupper(mode)) %>%
+  filter(k %% 2 == 0) %>%
+  ggplot(aes( x = factor(k), y = total_kmers, fill = mode)) +
+  geom_col(position = position_dodge(width = 0.5)) +
+  themeForSaving() +
+  scale_y_continuous(labels = scales::label_number(scale_cut = scales::cut_short_scale())) +
+  labs(title = "Number of Distinct K-mers in Reference Index", x = "K-mer Length", y = "Size of K-mer index", fill = "Mode") +
+  theme(legend.position = "bottom", legend.justification = "center")
+
+savePlotReport("../output/finalplots_real/kmerMapSize.jpg", p)
 ```
 

@@ -1,0 +1,126 @@
+---
+title: "Subset"
+output: html_document
+date: "2026-03-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+
+library(UpSetR)
+```
+
+
+```{r}
+molecule = "dna"
+fastq = "H5"
+```
+
+
+```{r}
+if(molecule == "rna"){
+  excluded = c("ENSSSCT00000019676","ENSSSCT00000043235")
+} else {
+  excluded = c("ENSSSCG00000018081", "ENSSSCG00000035362")
+}
+
+extType = ".jpg"
+
+readCounts = read_tsv("../output/read_counts.tsv") %>% mutate(filename = str_split_i(filename, "-", 1)) %>% distinct() 
+nFastqReads = readCounts %>% filter(filename == fastq) %>% pull(read_count)
+numReads = nFastqReads
+
+baseDir = paste0("../output/plotting_data/quality/")
+allGenesDir = "../output/all_gene_analysis/"
+plotsDir = paste0("../output/finalplots_real/")
+```
+
+
+```{r}
+threshold = 120
+```
+
+```{r}
+
+
+readFullReads <- function(molecule, threshold, modeStr) {
+  file_path <- paste0(baseDir, molecule, "-contained/full-read-lists/FullReads_threshold_", 
+                      threshold, "_", modeStr, ".txt")
+  
+  read_tsv(file_path, col_names = F) %>%
+    mutate(molecule = molecule,
+           mode = modeStr)  
+}
+
+dna <- readFullReads("dna", threshold, "and")
+rna <- readFullReads("rna", threshold, "and")
+
+
+full_reads <- bind_rows(dna, rna)
+
+dna <- readFullReads("dna", threshold, "or")
+rna <- readFullReads("rna", threshold, "or")
+
+full_reads <- bind_rows(full_reads, dna, rna)
+
+# --------------------------
+# Check
+# --------------------------
+
+table(full_reads$molecule)
+
+summary(full_reads)
+```
+
+
+```{r}
+dna_and_reads <- full_reads %>%
+  filter(molecule == "dna", mode == "and") %>%
+  pull(X1) %>% unique()
+
+dna_or_reads <- full_reads %>%
+  filter(molecule == "dna", mode == "or") %>%
+  pull(X1) %>% unique()
+
+rna_and_reads <- full_reads %>%
+  filter(molecule == "rna", mode == "and") %>%
+  pull(X1) %>% unique()
+
+rna_or_reads <- full_reads %>%
+  filter(molecule == "rna", mode == "or") %>%
+  pull(X1) %>% unique()
+
+# Create named list for UpSetR
+venn_list <- list(
+  `DNA AND` = dna_and_reads,
+  `DNA OR`  = dna_or_reads,
+  `RNA AND` = rna_and_reads,
+  `RNA OR`  = rna_or_reads
+)
+```
+
+```{r}
+pathname = paste0(plotsDir, "upset_T", threshold, ".png")
+png(pathname, width = 2500, height = 1500, res = 150)
+upset(
+  fromList(venn_list),
+  order.by = "freq",
+  main.bar.color = "steelblue",
+  sets.bar.color = c("skyblue", "lightgreen", "pink", "orange"),
+  keep.order = TRUE,
+  text.scale = c(3, 2, 2, 2, 2, 2),
+  mb.ratio = c(0.6, 0.4),# widen side bars to make room
+)
+
+
+dev.off()
+
+```
+
+
+
+

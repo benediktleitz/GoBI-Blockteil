@@ -17,7 +17,7 @@ source("functions.R")
 
 ```{r}
 gridsearchDir = "../output/plotting_data/runtime_analysis/"
-plotsDir = paste0(gridsearchDir, "plots/legendTitled/")
+plotsDir = paste0("../output/finalplots_real/")
 extType = ".jpg"
 
 
@@ -116,7 +116,6 @@ plotFullTiming <- function(xMetric, filter1Metric, filter1Value, filter2Metric =
     df <- df %>% filter(!!filter2Metric == !!filter2Value)
     subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
   }
-  print(df)
 
   x_breaks <- df %>% pull(!!xMetric) %>% unique()
 
@@ -142,7 +141,7 @@ plotFullTiming <- function(xMetric, filter1Metric, filter1Value, filter2Metric =
   return(p)
 }
 
-saveFullPlots(plotFullTiming, "meanReads", F)
+saveFullPlots(plotFullTiming, "meanReads", T)
 
  
 ```
@@ -202,7 +201,7 @@ plotByte <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL,
 }
 
 
-saveFullPlots(plotByte, "MeanByte")
+saveFullPlots(plotByte, "MeanByte", F)
 
 
 
@@ -256,8 +255,6 @@ plotPerCPUSec <- function(xMetric, filter1Metric, filter1Value, filter2Metric = 
     df <- df %>% filter(!!filter2Metric == !!filter2Value)
     subStr <- paste(subStr, "&", rlang::as_name(filter2Metric), "=", rlang::as_label(filter2Value))  
   }
-  
-  print(df)
 
   x_breaks <- df %>% pull(!!xMetric) %>% unique()
   
@@ -294,10 +291,37 @@ plotPerCPUSec <- function(xMetric, filter1Metric, filter1Value, filter2Metric = 
   return(p)
 }
 
-saveFullPlots(plotPerCPUSec, "meanReadsCPUSec", F, minute = F)
+
+
+saveFullPlots(plotPerCPUSec, "meanReadsCPUMin", T, minute = T)
 
 
 ```
+
+```{r}
+library(grid)
+library(gtable)
+```
+
+
+```{r}
+p = plotPerCPUSec(threshold, k, 15, offset, 15, minute = T)
+get_bottom_legend <- function(p){
+  g <- ggplotGrob(p)
+  g$grobs[[which(g$layout$name == "guide-box-bottom")]]
+}
+
+l = get_bottom_legend(p)
+```
+
+
+```{r}
+png(filename = paste0(plotsDir, "samplelegend.png"),
+    width = 4000, height = 600, res = 1200)
+grid::grid.draw(l)
+dev.off()
+```
+
 
 ```{r}
 plotByte <- function(xMetric, filter1Metric, filter1Value, filter2Metric = NULL, filter2Value = NULL, df = timingSummarised){

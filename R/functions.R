@@ -18,7 +18,11 @@ themeForSaving <- function() {
 }
 
 savePlotReport <- function(filepath, p){
-  ggsave(filepath, p, width = 2100, height = 1200, units = "px")
+  ggsave(filepath, p, width = 7,
+         height = 4,
+         units = "in",
+         dpi = 1200)
+  print("saved bestie :)")
 }
 
 sampleRandomGenes <- function(df, noZero, genesPerQuantile, nQuantile){

@@ -36,7 +36,7 @@ numReads = nFastqReads
 
 gridsearchDir = paste0("../output/plotting_data/quality/", molecule, "-contained/")
 allGenesDir = "../output/all_gene_analysis/"
-plotsDir = paste0(gridsearchDir, "plotsNew/")
+plotsDir = paste0("../output/finalplots_real/")
 
 long_summary = read_tsv(paste0(gridsearchDir, "combined_comparison_summary_long.tsv")) #%>% 
 # filter(mapping_reads != 0) 
@@ -272,15 +272,14 @@ plot_readCountBoxByThreshold <- function(modeString, xMetric, filter1Metric, fil
       "Not Filtered Reads" = "#EA526F"
     ))  +
     labs(
-      title = paste0("Read Counts by ", xString, " (", filter1String, " = ", filter1Value, ", mode = ", modeString, ")"),
+      title = paste0("Read Counts by ", xString, " for ", toupper(molecule), " (", filter1String, " = ", filter1Value,")"),
       x = xString,
       fill = "Read Type"
     ) +
     themeForSaving() +
     theme_bw() +
     theme(
-      legend.position = "bottom",
-      legend.justification = "center",
+      legend.position = "none",
       panel.grid.minor = element_blank()
     ) 
 
@@ -291,9 +290,58 @@ plot_readCountBoxByThreshold <- function(modeString, xMetric, filter1Metric, fil
   return(p)
 }
 
-saveReadCounts(plotFunc = plot_readCountBoxByThreshold, modes = c("both"))
+#saveReadCounts(plotFunc = plot_readCountBoxByThreshold, modes = c("both"))
+
+p <- plot_readCountBoxByThreshold(
+          modeString = "both",
+          xMetric = k,
+          filter1Metric = threshold,
+          filter1Value = 105
+        )
+
+pathname <- paste0(plotsDir,
+  "ReadCountByThreshold_T105_both_filtered2_", molecule, extType
+)
+
+savePlotReport(pathname, p)
+p <- plot_readCountBoxByThreshold(
+          modeString = "both",
+          xMetric = threshold,
+          filter1Metric = k,
+          filter1Value = 15
+        )
+
+pathname <- paste0(
+  plotsDir,
+  "ReadCountByK_K",
+  15, "_", "both", "_filtered2_", molecule, extType
+)
+
+savePlotReport(pathname, p)
+
+
+
 
 ```
+
+```{r}
+get_bottom_legend <- function(p){
+  g <- ggplotGrob(p)
+  g$grobs[[which(g$layout$name == "guide-box-bottom")]]
+}
+
+p = p + labs(col = "Read Type")
+
+l = get_bottom_legend(p)
+```
+
+```{r}
+png(filename = paste0(plotsDir, "readTypeLegend.png"),
+    width = 4200, height = 600, res = 1200)
+grid::grid.draw(l)
+dev.off()
+```
+
 
 ```{r}
 for(value in c("not_filtered", "filtered_reads")){
@@ -499,7 +547,7 @@ badK = c(17,19,22,23,26,27,28,29)
 #totalCountsFiltered = totalCountsFiltered %>% filter(!k %in% badK)
 for(mode in c("or", "and")){
   p = plotScatterTradeOff(mode)
-  savePlotReport(paste0(plotsDir, "scatter/mapping_filter_", mode, "",extType), p)
+  savePlotReport(paste0("../output/finalplots_real/mapping_filter_", mode, "",extType), p)
   print(p)
 }
 ```
@@ -527,10 +575,10 @@ excluded
 
 ```{r}
 plotRecallPrecision <- function(modeString){
-  totalCounts %>% 
+  totalCountsFiltered %>% 
   filter(mode == modeString) %>% 
-  mutate(recall = matched/totalMapped,
-                       precision = matched/totalFiltered) %>% 
+  mutate(recall = matchedReads/totalMapped,
+                       precision = matchedReads/totalRetained) %>% 
   ggplot(aes(x = recall, y=precision)) +
   geom_point(aes(shape = factor(threshold), color = factor(k)), size = 2.5, alpha = 0.7) +
   themeForSaving() +
@@ -542,7 +590,8 @@ plotRecallPrecision <- function(modeString){
 
 for(mode in c("or", "and")){
   p = plotRecallPrecision(mode)
-  savePlotReport(paste0(plotsDir, "precision_recall/precision_recall_", mode, extType), p)
+  print(p)
+  #savePlotReport(paste0(plotsDir, "precision_recall/precision_recall_", mode, extType), p)
   #l = get_legend(p)
   #ggsave(paste0(gridsearchDir, "precision_recall_legend_bottom", extType), l)
 }
